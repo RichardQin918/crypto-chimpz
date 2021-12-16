@@ -136,7 +136,7 @@
 
   .line {
     position: absolute;
-    top: 0;
+    top: $progress-width;
     bottom: -20px;
     left: $percentage-width + $spacing + ($progress-width - $line-width) / 2;
     width: $line-width;

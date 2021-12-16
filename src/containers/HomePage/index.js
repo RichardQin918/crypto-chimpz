@@ -5,22 +5,33 @@ import Carousel from './Carousel'
 import TeamMember from "components/TeamMember";
 import FAQ from "components/FAQ";
 
+import {gsap} from "gsap";
+import {ScrollTrigger} from "gsap/ScrollTrigger";
+
 import './HomePage.scoped.scss';
+import './HomePage.scss';
 import {ReactComponent as Divider} from 'assets/zigzag-divider.svg';
 
 import TeamMemberData from 'data/team'
 import FAQData from 'data/faq'
+import ReactCanvasConfetti from "react-canvas-confetti";
+
+gsap.registerPlugin(ScrollTrigger)
 
 class HomePage extends React.Component {
     constructor(props) {
         super(props);
 
         this.state = {
-            activeQuestion: ''
+            activeQuestion: '',
         }
+
+        this.confettiTrigger = null
+        this.animationInstance = null
 
         this.toggleFAQ = this.toggleFAQ.bind(this)
     }
+
 
     toggleFAQ(question) {
         if (this.state.activeQuestion === question) {
@@ -30,13 +41,98 @@ class HomePage extends React.Component {
         }
     }
 
+    makeShot(particleRatio, opts) {
+        this.animationInstance && this.animationInstance({
+            ...opts,
+            resize: true,
+            origin: { y: 0.7 },
+            particleCount: Math.floor(200 * particleRatio),
+        });
+    }
+
+    fire() {
+        this.makeShot(0.25, {
+            spread: 26,
+            startVelocity: 55,
+        });
+        this.makeShot(0.2, {
+            spread: 60,
+        });
+        this.makeShot(0.35, {
+            spread: 100,
+            decay: 0.91,
+            scalar: 0.8
+        });
+        this.makeShot(0.1, {
+            spread: 120,
+            startVelocity: 25,
+            decay: 0.92,
+            scalar: 1.2
+        });
+        this.makeShot(0.1, {
+            spread: 120,
+            startVelocity: 45,
+        });
+    }
+
+    getInstance = (instance) => {
+        this.animationInstance = instance;
+    };
+
+    componentDidMount() {
+        document.querySelectorAll('#roadmap .line, #roadmap .circle').forEach(el => {
+            gsap.timeline({
+                scrollTrigger: {
+                    trigger: el,
+                    start: 'top 40%',
+                    end: 'bottom 40%',
+                    scrub: true,
+                }
+            }).fromTo(el, {
+                background: "linear-gradient(to bottom, #21FA90 0%, #fff 0%, #fff 100%)"
+            }, {
+                background: "linear-gradient(to bottom, #21FA90 100%, #fff 100%, #fff 100%)"
+            })
+        })
+        document.querySelectorAll('#roadmap .percentage, #roadmap h3').forEach(el => {
+            gsap.timeline({
+                scrollTrigger: {
+                    trigger: el,
+                    start: 'top 40%',
+                    end: 'bottom 40%',
+                    scrub: true,
+                }
+            }).to(el, {
+                color: "#21FA90"
+            })
+        })
+
+        this.confettiTrigger = ScrollTrigger.create({
+            trigger: '#roadmap .timeline',
+            start: 'bottom 40%',
+            end: 'bottom top',
+            onToggle: self => {
+                if (self.isActive && self.direction > 0) {
+                    this.fire()
+                    self.kill()
+                    this.confettiTrigger = null
+                }
+            }
+        })
+    }
+
+    componentWillUnmount() {
+        this.confettiTrigger && this.confettiTrigger.kill()
+    }
+
     render() {
         const TeamMembers = TeamMemberData.map(member => (
             <TeamMember {...member} key={member.name} className={'col-12 col-sm-6 col-lg-3'}/>
         ))
 
         const FAQs = FAQData.map(item => (
-            <FAQ {...item} key={item.question} onToggle={this.toggleFAQ} active={this.state.activeQuestion === item.question}/>
+            <FAQ {...item} key={item.question} onToggle={this.toggleFAQ}
+                 active={this.state.activeQuestion === item.question}/>
         ))
 
         return (
@@ -210,6 +306,7 @@ class HomePage extends React.Component {
                                 </div>
                             </div>
                         </div>
+                        <ReactCanvasConfetti className={'canvas'} refConfetti={this.getInstance}/>
                     </div>
                 </div>
                 <div className="wrapper roadmap-101" id={'roadmap-101'}>
@@ -271,10 +368,12 @@ class HomePage extends React.Component {
                         <div className="item">
                             <h3>CARE PACKAGES</h3>
                             <p>
-                                <strong>250 OG Chimpz</strong> will receive a care package full of unique items (more to be announced soon)
+                                <strong>250 OG Chimpz</strong> will receive a care package full of unique items (more to
+                                be announced soon)
                             </p>
                             <p>
-                                <strong>100 care packages</strong> will also be given away randomly to anyone who mints more than 2 CryptoChimpz.
+                                <strong>100 care packages</strong> will also be given away randomly to anyone who mints
+                                more than 2 CryptoChimpz.
                             </p>
                         </div>
                         <div className="item">
