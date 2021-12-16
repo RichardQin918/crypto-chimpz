@@ -1,17 +1,37 @@
+/**
+ * index.js
+ *
+ * This is the entry file for the application, only setup and boilerplate
+ * code.
+ */
+
+// Needed for redux-saga es6 generator support
+// import '@babel/polyfill';
+
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import {Provider} from 'react-redux';
+import {ConnectedRouter} from 'connected-react-router';
+import history from 'utils/history';
+
+import 'utils/fontawesome';
+import 'sanitize.css/sanitize.css';
+import 'styles/bootstrap.scss';
+import 'styles/global.scss';
+
+// Import root app
+import App from 'containers/App';
+import configureStore from './configureStore';
+
+const initialState = {};
+const store = configureStore(initialState, history);
+const MOUNT_NODE = document.getElementById('root');
 
 ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+    <Provider store={store}>
+        <ConnectedRouter history={history}>
+            <App/>
+        </ConnectedRouter>
+    </Provider>,
+    MOUNT_NODE,
+)

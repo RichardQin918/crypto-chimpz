@@ -1,0 +1,36 @@
+@import "../../node_modules/bootstrap/scss/functions";
+
+$font-family-sans-serif: 'Roboto', sans-serif;
+$input-btn-font-family: 'Roboto', sans-serif;
+
+@import "../../node_modules/bootstrap/scss/variables";
+@import "../../node_modules/bootstrap/scss/mixins";
+@import "../../node_modules/bootstrap/scss/root";
+
+$custom-colors: (
+        "twitter": #1da1f2,
+        "discord": #7289da,
+        "instagram": #c13584,
+        "social": #8e67ea
+);
+$theme-colors: map-merge($theme-colors, $custom-colors);
+
+@import "../../node_modules/bootstrap/scss/grid";
+@import "../../node_modules/bootstrap/scss/buttons";
+
+.btn {
+  //font-family: 'Roboto', sans-serif;
+  svg {
+    margin-right: 0.5em;
+  }
+
+  &.btn-twitter,
+  &.btn-discord,
+  &.btn-instagram,
+  &.btn-social {
+    color: #fff;
+  }
+}
+
+@import "../../node_modules/bootstrap/scss/utilities";
+@import "../../node_modules/bootstrap/scss/utilities/api";

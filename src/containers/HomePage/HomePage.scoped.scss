@@ -1,0 +1,207 @@
+.banner {
+  background: url("./banner.png") center center;
+  background-size: cover;
+  position: relative;
+  overflow: hidden;
+  padding-bottom: calc(80px + 6%);
+
+  h1 {
+    font-size: 6.3vw;
+    margin-bottom: 0;
+  }
+
+  h2 {
+    font-size: 3.1vw;
+    font-family: 'Space Mono', sans-serif;
+  }
+
+  h1, h2 {
+    text-shadow: 0 0 15px transparentize(#000, 0.2);
+  }
+
+  .divider {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    transform: scale(1.9, 0.6);
+    transform-origin: center bottom;
+    color: $background;
+  }
+
+  .container {
+    display: flex;
+  }
+
+  .content {
+    margin-left: auto;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  @media (max-width: 952px) {
+    .content {
+      margin: auto;
+    }
+    h1 {
+      font-size: 60px;
+    }
+    h2 {
+      font-size: 30px;
+    }
+  }
+}
+
+.mint {
+  padding: 80px 0;
+
+  .container {
+    text-align: center;
+  }
+
+  .btn {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    padding: 1em 2em;
+  }
+}
+
+.intro {
+  font-family: 'Space Mono', sans-serif;
+
+  img {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  h2 {
+    margin-top: -0.4em;
+    font-size: 40px;
+  }
+}
+
+.roadmap,
+.roadmap-101,
+.faq,
+.team {
+  h2 {
+    text-align: center;
+    font-size: 40px;
+    font-family: 'Press Start 2P', sans-serif;
+  }
+}
+
+.timeline {
+  $percentage-width: 90px;
+  $progress-width: 40px;
+  $line-width: 3px;
+  $header-font-size: 30px;
+  $spacing: 20px;
+
+  .item {
+    position: relative;
+    padding-left: $percentage-width + $progress-width + $spacing * 2;
+    padding-top: 20px;
+    padding-bottom: 20px;
+
+    &:first-child {
+      padding-top: 0;
+
+      .circle {
+        top: 0;
+      }
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+
+      .line {
+        display: none;
+      }
+    }
+
+    h3 {
+      margin-top: 0;
+      font-size: $header-font-size;
+      font-family: 'Montserrat', sans-serif;
+      margin-bottom: 0.5em;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .line {
+    position: absolute;
+    top: 0;
+    bottom: -20px;
+    left: $percentage-width + $spacing + ($progress-width - $line-width) / 2;
+    width: $line-width;
+    background: #fff;
+  }
+
+  .circle {
+    position: absolute;
+    top: $spacing;
+    left: $percentage-width + $spacing;
+    width: $progress-width;
+    height: $progress-width;
+    background-color: #fff;
+    border-radius: 50%;
+    padding: 3px;
+
+    &::after {
+      content: url("./timeline-bullet.svg");
+    }
+  }
+
+  .percentage {
+    position: absolute;
+    left: 0;
+    font-size: $header-font-size;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    width: $percentage-width;
+    text-align: right;
+  }
+
+  @media (max-width: 600px) {
+    .item {
+      padding-left: $progress-width + $spacing;
+    }
+    .percentage {
+      position: unset;
+      text-align: left;
+    }
+    .line {
+      left: ($progress-width - $line-width) / 2
+    }
+    .circle {
+      left: 0;
+    }
+  }
+}
+
+.roadmap-101 {
+  .item {
+    padding-bottom: 0.5em;
+  }
+  h3 {
+    font-size: 30px;
+    line-height: 1.1;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    margin-bottom: 0.5em;
+  }
+}
+
+.faq {
+
+}
+
+.team {
+  background-color: #15102B;
+}

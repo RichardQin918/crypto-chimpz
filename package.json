@@ -2,21 +2,55 @@
   "name": "website",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "start": "craco start",
+    "serve": "serve -s build -l 8080",
+    "build": "craco build -- --stats --progress",
+    "test": "craco test",
+    "eject": "craco eject",
+    "analyze": "npx webpack-bundle-analyzer ./build/bundle-stats.json",
+    "deploy": "firebase deploy --only hosting"
+  },
   "dependencies": {
+    "@babel/polyfill": "^7.12.1",
+    "@craco/craco": "^6.4.3",
+    "@fortawesome/fontawesome-svg-core": "^1.2.36",
+    "@fortawesome/free-brands-svg-icons": "^5.15.4",
+    "@fortawesome/pro-duotone-svg-icons": "^5.15.4",
+    "@fortawesome/pro-light-svg-icons": "^5.15.4",
+    "@fortawesome/pro-regular-svg-icons": "^5.15.4",
+    "@fortawesome/pro-solid-svg-icons": "^5.15.4",
+    "@fortawesome/react-fontawesome": "^0.1.16",
+    "@reduxjs/toolkit": "^1.7.0",
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^13.5.0",
+    "bootstrap": "^5.1.3",
+    "classnames": "^2.3.1",
+    "history": "^4.10.1",
+    "immer": "^9.0.7",
     "react": "^17.0.2",
+    "react-bootstrap": "^2.0.3",
+    "react-collapse": "^5.1.1",
     "react-dom": "^17.0.2",
+    "react-helmet": "^6.1.0",
+    "react-redux": "^7.2.6",
+    "react-router-dom": "^5.3.0",
+    "react-router-hash-link": "^2.4.3",
     "react-scripts": "5.0.0",
+    "react-slick": "^0.28.1",
+    "redux-saga": "^1.1.3",
+    "sanitize.css": "^13.0.0",
+    "sass": "^1.45.0",
+    "slick-carousel": "^1.8.1",
+    "styled-components": "^5.3.3",
     "web-vitals": "^2.1.2"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "deploy": "firebase deploy --only hosting"
+  "_moduleAliases": {
+    "styles": "src/styles",
+    "utils": "src/utils",
+    "containers": "src/containers",
+    "components": "src/components"
   },
   "eslintConfig": {
     "extends": [
@@ -35,5 +69,18 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "connected-react-router": "^6.9.2",
+    "craco-alias": "^3.0.1",
+    "craco-plugin-scoped-css": "^1.1.1",
+    "craco-sass-resources-loader": "^1.1.0",
+    "progress-bar-webpack-plugin": "^2.1.0",
+    "progress-webpack-plugin": "^1.0.12",
+    "redux-devtools": "^3.7.0",
+    "serve": "^13.0.2",
+    "source-map-explorer": "^2.5.2",
+    "webpack-bundle-analyzer": "^4.5.0",
+    "webpackbar": "^5.0.2"
   }
 }
