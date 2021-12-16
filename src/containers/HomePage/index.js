@@ -78,7 +78,7 @@ class HomePage extends React.Component {
                     <div className="container">
                         <div className="row gx-5">
                             <div className="col-12 col-md-5 mb-5 mb-md-0 text-center text-md-start">
-                                <img src={require('assets/510.PNG')} alt=""/>
+                                <img src={require('./510.jpg')} alt=""/>
                             </div>
                             <div className="col-12 col-md-7">
                                 <h2 className={'text-center text-md-start'}>

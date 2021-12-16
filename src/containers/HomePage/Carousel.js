@@ -17,17 +17,23 @@ class Carousel extends React.Component {
     }
 
     render() {
+        const Slide = styled.div`
+            &:focus-visible {
+                outline: none;
+            }
+        `
         const Img = styled.img`
             width: 100%;
         `
         const slides = images.map((image, index) => {
             return (
-                <div key={index}>
-                    <Img src={image} alt="" style={{}}/>
-                </div>
+                <Slide key={index}>
+                    <Img src={image}/>
+                </Slide>
             )
         })
         const settings = {
+            lazyLoad: 'ondemand',
             infinite: true,
             arrows: false,
             autoplay: true,
