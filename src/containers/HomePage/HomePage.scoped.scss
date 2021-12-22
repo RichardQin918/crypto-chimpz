@@ -71,11 +71,6 @@
 .intro {
   font-family: 'Space Mono', sans-serif;
 
-  img {
-    width: 100%;
-    max-width: 400px;
-  }
-
   h2 {
     margin-top: -0.4em;
     font-size: 40px;
@@ -94,11 +89,43 @@
 }
 
 .timeline {
+  position: relative;
+
   $percentage-width: 90px;
   $progress-width: 40px;
   $line-width: 3px;
   $header-font-size: 30px;
   $spacing: 20px;
+
+  .indicator {
+    //opacity: 0.5;
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: $percentage-width + $spacing;
+    width: $progress-width;
+    height: $progress-width;
+    background-color: #fff;
+    //background-color: #21FA90;
+    border-radius: 50%;
+    padding: $line-width;
+
+    &::after {
+      content: url("./timeline-bullet.svg");
+    }
+  }
+
+  .trigger {
+    .item {
+      &:last-child {
+        padding-bottom: 20px;
+        .line {
+          bottom: -20px;
+          height: unset;
+        }
+      }
+    }
+  }
 
   .item {
     position: relative;
@@ -118,7 +145,8 @@
       padding-bottom: 0;
 
       .line {
-        display: none;
+        bottom: unset;
+        height: 40px;
       }
     }
 
@@ -136,27 +164,23 @@
 
   .line {
     position: absolute;
-    top: $progress-width;
+    top: 0;
     bottom: -20px;
     left: $percentage-width + $spacing + ($progress-width - $line-width) / 2;
     width: $line-width;
     background: #fff;
   }
 
-  .circle {
-    position: absolute;
-    top: $spacing;
-    left: $percentage-width + $spacing;
-    width: $progress-width;
-    height: $progress-width;
-    background-color: #fff;
-    border-radius: 50%;
-    padding: 3px;
-
-    &::after {
-      content: url("./timeline-bullet.svg");
-    }
-  }
+  //.circle {
+  //  position: absolute;
+  //  top: $spacing;
+  //  left: $percentage-width + $spacing;
+  //  width: $progress-width;
+  //  height: $progress-width;
+  //  background-color: #fff;
+  //  border-radius: 50%;
+  //  padding: 3px;
+  //}
 
   .percentage {
     position: absolute;

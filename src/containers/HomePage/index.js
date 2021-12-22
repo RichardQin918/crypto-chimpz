@@ -4,6 +4,7 @@ import Button from 'react-bootstrap/Button';
 import Carousel from './Carousel'
 import TeamMember from "components/TeamMember";
 import FAQ from "components/FAQ";
+import Image from 'components/Image'
 
 import {gsap} from "gsap";
 import {ScrollTrigger} from "gsap/ScrollTrigger";
@@ -27,6 +28,7 @@ class HomePage extends React.Component {
         }
 
         this.confettiTrigger = null
+        this.indicatorTrigger = null
         this.animationInstance = null
 
         this.toggleFAQ = this.toggleFAQ.bind(this)
@@ -89,9 +91,11 @@ class HomePage extends React.Component {
                     scrub: true,
                 }
             }).fromTo(el, {
-                background: "linear-gradient(to bottom, #21FA90 0%, #fff 0%, #fff 100%)"
+                background: "linear-gradient(to bottom, #21FA90 0%, #fff 0%, #fff 100%)",
+                ease: 'none',
             }, {
-                background: "linear-gradient(to bottom, #21FA90 100%, #fff 100%, #fff 100%)"
+                background: "linear-gradient(to bottom, #21FA90 100%, #fff 100%, #fff 100%)",
+                ease: 'none',
             })
         })
         document.querySelectorAll('#roadmap .percentage, #roadmap h3').forEach(el => {
@@ -103,7 +107,8 @@ class HomePage extends React.Component {
                     scrub: true,
                 }
             }).to(el, {
-                color: "#21FA90"
+                color: "#21FA90",
+                ease: 'none',
             })
         })
 
@@ -119,10 +124,26 @@ class HomePage extends React.Component {
                 }
             }
         })
+
+
+
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: document.querySelector('#roadmap .timeline .trigger'),
+                pin: document.querySelector('#roadmap .indicator'),
+                start: '20px 40%',
+                end: 'bottom+=40 40%',
+                scrub: true,
+            }
+        }).to(document.querySelector('#roadmap .indicator'), {
+            backgroundColor: "#21FA90",
+            ease: 'none',
+        })
     }
 
     componentWillUnmount() {
         this.confettiTrigger && this.confettiTrigger.kill()
+        this.indicatorTrigger && this.indicatorTrigger.kill()
     }
 
     render() {
@@ -174,7 +195,7 @@ class HomePage extends React.Component {
                     <div className="container">
                         <div className="row gx-5">
                             <div className="col-12 col-md-5 mb-5 mb-md-0 text-center text-md-start">
-                                <img src={require('./510.jpg')} alt=""/>
+                                <Image src={require('./510.jpg')} style={{maxWidth: '400px'}}/>
                             </div>
                             <div className="col-12 col-md-7">
                                 <h2 className={'text-center text-md-start'}>
@@ -203,93 +224,96 @@ class HomePage extends React.Component {
                     <div className="container">
                         <h2>ROADMAP</h2>
                         <div className="timeline">
-                            <div className="item">
-                                <div className="line"/>
-                                <div className="circle"/>
-                                <div className="percentage">0%</div>
-                                <div className="content">
-                                    <h3>Who Let the Chimpz Out!</h3>
-                                    <p>
-                                        Join the Discord Server and introduce yourself, we will be giving away 5-10 NFTs
-                                        to active discord members and on our Twitter via giveaways. Active discord
-                                        members or members with a minimum 15 invites will be whitelisted for the
-                                        pre-sale!
-                                    </p>
+                            <div className={'indicator'}/>
+                            <div className="trigger">
+                                <div className="item">
+                                    <div className="line"/>
+                                    {/*<div className="circle"/>*/}
+                                    <div className="percentage">0%</div>
+                                    <div className="content">
+                                        <h3>Who Let the Chimpz Out!</h3>
+                                        <p>
+                                            Join the Discord Server and introduce yourself, we will be giving away 5-10 NFTs
+                                            to active discord members and on our Twitter via giveaways. Active discord
+                                            members or members with a minimum 15 invites will be whitelisted for the
+                                            pre-sale!
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="item">
+                                    <div className="line"/>
+                                    {/*<div className="circle"/>*/}
+                                    <div className="percentage">25%</div>
+                                    <div className="content">
+                                        <h3>Community is Everything!</h3>
+                                        <p>
+                                            As the Chimpz break out and grow in numbers, they are attracting a lot of
+                                            unwanted attention, they will need to fit in with the crowd! At this point, We
+                                            will be investing <strong>$100,000</strong> worth of ETH into the CryptoChimpz
+                                            community fund.
+                                            This fund will be used to further grow our community through marketing efforts
+                                            and to further develop the CryptoChimpz project.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="item">
+                                    <div className="line"/>
+                                    {/*<div className="circle"/>*/}
+                                    <div className="percentage">50%</div>
+                                    <div className="content">
+                                        <h3>Drip Too Hard!</h3>
+                                        <p>
+                                            As the Chimpz eagerly try and survive, they discover human fashion and get
+                                            dripped out, some Chimpz get drippy-er than others. The exclusive CryptoChimpz
+                                            <strong>Merch store</strong> will now be available to all Chimp holders. These
+                                            items will be more
+                                            than just a T-shirt! 👀
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="item">
+                                    <div className="line"/>
+                                    {/*<div className="circle"/>*/}
+                                    <div className="percentage">75%</div>
+                                    <div className="content">
+                                        <h3>Save the Chimpz</h3>
+                                        <p>
+                                            Back at the ChimpStar Galaxy, the ChimpWives are becoming restless and
+                                            impatient, worried about their Chimp companions. One of the Chimpz, known as the
+                                            AstroChimp, has managed to figure out how to fly back to space and call their
+                                            wives.
+                                        </p>
+                                        <p>
+                                            We will be donating <strong>$50,000</strong> to a charity geared towards saving
+                                            and conserving
+                                            chimpanzees. The non-profit will be selected by the community. (These funds will
+                                            not come out of the CryptoChimpz Fund!).
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="item">
+                                    <div className="line"/>
+                                    {/*<div className="circle"/>*/}
+                                    <div className="percentage">100%</div>
+                                    <div className="content">
+                                        <h3>Blast Off!</h3>
+                                        <p>
+                                            ChimpWives have been summoned by the AstroChimp, and they are on the lookout for
+                                            their partners and will turn every inch of space inside out to ensure their
+                                            husbands are returned home!
+                                        </p>
+                                        <p>
+                                            We will be giving away <strong>$100,000</strong> worth of ETH. All CryptoChimpz
+                                            will get a <strong>free</strong>
+                                            mint pass to mint a ChimpWife. All holders of the ChimpWife will be able to
+                                            <strong>breed</strong> the two to produce a CryptoChimpKid.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                             <div className="item">
                                 <div className="line"/>
-                                <div className="circle"/>
-                                <div className="percentage">25%</div>
-                                <div className="content">
-                                    <h3>Community is Everything!</h3>
-                                    <p>
-                                        As the Chimpz break out and grow in numbers, they are attracting a lot of
-                                        unwanted attention, they will need to fit in with the crowd! At this point, We
-                                        will be investing <strong>$100,000</strong> worth of ETH into the CryptoChimpz
-                                        community fund.
-                                        This fund will be used to further grow our community through marketing efforts
-                                        and to further develop the CryptoChimpz project.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="item">
-                                <div className="line"/>
-                                <div className="circle"/>
-                                <div className="percentage">50%</div>
-                                <div className="content">
-                                    <h3>Drip Too Hard!</h3>
-                                    <p>
-                                        As the Chimpz eagerly try and survive, they discover human fashion and get
-                                        dripped out, some Chimpz get drippy-er than others. The exclusive CryptoChimpz
-                                        <strong>Merch store</strong> will now be available to all Chimp holders. These
-                                        items will be more
-                                        than just a T-shirt! 👀
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="item">
-                                <div className="line"/>
-                                <div className="circle"/>
-                                <div className="percentage">75%</div>
-                                <div className="content">
-                                    <h3>Save the Chimpz</h3>
-                                    <p>
-                                        Back at the ChimpStar Galaxy, the ChimpWives are becoming restless and
-                                        impatient, worried about their Chimp companions. One of the Chimpz, known as the
-                                        AstroChimp, has managed to figure out how to fly back to space and call their
-                                        wives.
-                                    </p>
-                                    <p>
-                                        We will be donating <strong>$50,000</strong> to a charity geared towards saving
-                                        and conserving
-                                        chimpanzees. The non-profit will be selected by the community. (These funds will
-                                        not come out of the CryptoChimpz Fund!).
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="item">
-                                <div className="line"/>
-                                <div className="circle"/>
-                                <div className="percentage">100%</div>
-                                <div className="content">
-                                    <h3>Blast Off!</h3>
-                                    <p>
-                                        ChimpWives have been summoned by the AstroChimp, and they are on the lookout for
-                                        their partners and will turn every inch of space inside out to ensure their
-                                        husbands are returned home!
-                                    </p>
-                                    <p>
-                                        We will be giving away <strong>$100,000</strong> worth of ETH. All CryptoChimpz
-                                        will get a <strong>free</strong>
-                                        mint pass to mint a ChimpWife. All holders of the ChimpWife will be able to
-                                        <strong>breed</strong> the two to produce a CryptoChimpKid.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="item">
-                                <div className="line"/>
-                                <div className="circle"/>
+                                {/*<div className="circle"/>*/}
                                 <div className="percentage">101%</div>
                                 <div className="content">
                                     <h3>Wait, there’s more!</h3>

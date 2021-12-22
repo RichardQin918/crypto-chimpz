@@ -46,11 +46,11 @@ class Header extends React.Component {
                 </div>
                 <Collapse isOpened={this.state.active}>
                     <div className={ClassNames(['mobile-menu'])}>
-                        <Link className="item" to="#about">About</Link>
-                        <Link className="item" to="#roadmap">Roadmap</Link>
-                        <Link className="item" to="#roadmap-101">101% Roadmap</Link>
-                        <Link className="item" to="#faq">FAQ</Link>
-                        <Link className="item" to="#team">The Team</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#about">About</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#roadmap">Roadmap</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#roadmap-101">101% Roadmap</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#faq">FAQ</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#team">The Team</Link>
                     </div>
                 </Collapse>
             </header>

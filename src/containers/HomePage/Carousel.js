@@ -1,6 +1,7 @@
 import React from "react";
 import Slider from "react-slick";
 import styled from "styled-components";
+import Image from 'components/Image'
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -22,13 +23,11 @@ class Carousel extends React.Component {
                 outline: none;
             }
         `
-        const Img = styled.img`
-            width: 100%;
-        `
+
         const slides = images.map((image, index) => {
             return (
                 <Slide key={index}>
-                    <Img src={image}/>
+                    <Image src={image}/>
                 </Slide>
             )
         })
