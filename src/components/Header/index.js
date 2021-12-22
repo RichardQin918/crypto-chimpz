@@ -9,6 +9,7 @@ import scrollWithOffset from "utils/scrollWithOffset";
 import './Header.scoped.scss'
 import './Header.scss'
 import Logo from 'assets/logo-white.png'
+import Image from "components/Image";
 
 class Header extends React.Component {
     constructor(props) {
@@ -29,7 +30,7 @@ class Header extends React.Component {
             <header>
                 <div className="wrapper">
                     <div className="container">
-                        <img src={Logo} alt="Crypto Chimpz" className="logo"/>
+                        <Image src={Logo} aspectRatio={'537:160'} alt="Crypto Chimpz" className="logo"/>
                         <div className="spacer"/>
                         <div className="menu">
                             <Link className="item" scroll={scrollWithOffset} to="#about">About</Link>

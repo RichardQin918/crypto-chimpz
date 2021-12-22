@@ -18,8 +18,8 @@ header {
   align-items: center;
 }
 
-.logo {
-  height: 80px;
+/deep/ .logo {
+  max-width: 250px;
   margin-right: 50px;
 }
 
@@ -94,8 +94,8 @@ header {
   header {
     //padding: 20px 50px;
   }
-  .logo {
-    height: 40px;
+  /deep/ .logo {
+    width: 160px;
   }
   .menu {
     display: none;

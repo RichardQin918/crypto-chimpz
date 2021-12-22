@@ -17,6 +17,8 @@ $theme-colors: map-merge($theme-colors, $custom-colors);
 
 @import "../../node_modules/bootstrap/scss/grid";
 @import "../../node_modules/bootstrap/scss/buttons";
+//@import "../../node_modules/bootstrap/scss/reboot";
+@import "../../node_modules/bootstrap/scss/forms";
 
 .btn {
   //font-family: 'Roboto', sans-serif;

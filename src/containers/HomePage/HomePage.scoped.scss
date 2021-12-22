@@ -171,17 +171,6 @@
     background: #fff;
   }
 
-  //.circle {
-  //  position: absolute;
-  //  top: $spacing;
-  //  left: $percentage-width + $spacing;
-  //  width: $progress-width;
-  //  height: $progress-width;
-  //  background-color: #fff;
-  //  border-radius: 50%;
-  //  padding: 3px;
-  //}
-
   .percentage {
     position: absolute;
     left: 0;
@@ -204,6 +193,9 @@
       left: ($progress-width - $line-width) / 2
     }
     .circle {
+      left: 0;
+    }
+    .indicator {
       left: 0;
     }
   }

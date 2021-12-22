@@ -1,3 +1,4 @@
+import React from "react";
 import PropTypes from 'prop-types';
 import styled from "styled-components";
 
@@ -5,8 +6,13 @@ const Wrapper = styled.div`
   position: relative;
   display: inline-block;
   width: 100%;
+  
+  &::after {
+    content: '';
+    display: block;
+    padding-bottom: ${({paddingBottom}) => paddingBottom}%;
+  }
 `
-
 const Img = styled.img`
   position: absolute;
   top: 0;
@@ -17,12 +23,11 @@ const Img = styled.img`
 `
 
 function Image(props) {
-
     const [w, h] = props.aspectRatio.split(':')
     const paddingBottom = h / w * 100
+
     return (
-        <Wrapper style={{...props.style}}>
-            <div style={{paddingBottom: `${paddingBottom}%`}}/>
+        <Wrapper style={{...props.style}} className={props.className} paddingBottom={paddingBottom}>
             <Img src={props.src} alt={props.alt || ''}/>
         </Wrapper>
     )
