@@ -16,6 +16,12 @@ import TeamMemberData from 'data/team'
 import FAQData from 'data/faq'
 import ReactCanvasConfetti from "react-canvas-confetti";
 
+import { Modal, Fade, Grid, Typography } from '@material-ui/core'
+import CustomTextField from "../../components/CustomTextField/CustomTextField";
+
+import { ethers } from "ethers";
+import Contract from '../../config/Contract.json'
+
 gsap.registerPlugin(ScrollTrigger)
 
 class HomePage extends React.Component {
@@ -24,6 +30,28 @@ class HomePage extends React.Component {
 
         this.state = {
             activeQuestion: '',
+            mintModalVisible: false,
+            mintAmount: 0,
+            address: '',
+            networkId: 0,
+            chainId: 0,
+            mintModalWarning: '',
+            startWatch: false,
+
+            availableAmount: 0,
+            maxSupply: 0,
+            maxMintAmount: 0,
+            nftPerAddressLimit: 0,
+            paused: false,
+            onlyWhitelisted: false,
+            isWhitelisted: false,
+            cost: 0,
+            loading: true,
+            owner: '',
+            soldOut: false,
+
+            msgModalVisible: false,
+            explorerHash: ''
         }
 
         this.confettiTrigger = null
@@ -79,7 +107,179 @@ class HomePage extends React.Component {
         this.animationInstance = instance;
     };
 
-    componentDidMount() {
+    handleClose = () => {
+        this.setState({mintModalVisible: false})
+    }
+
+    handleOpen = () => {
+        this.setState({mintModalVisible: true})
+    }
+
+    handleAmountChange = (amount) => {
+        this.setState({
+            mintAmount: amount
+        })
+
+
+    }
+
+    closeMsgModal = () => {
+        this.setState({
+            msgModalVisible: false
+        })
+    }
+
+    goToEtherscan = () => {
+        const { explorerHash } = this.state
+        window.open(`https://rinkeby.etherscan.io/tx/${explorerHash}`, "_blank")
+    }
+
+    handleMint = async () => {
+        const { mintAmount, address } = this.state
+        console.log('minting !: ', mintAmount, address)
+        this.setState({
+            mintDone: false
+        }, async () => {
+            try {
+                let res = await this.contract.mint(mintAmount)
+                console.log('res: ', res.hash)
+                if (res.hash !== null) {
+                    this.setState({
+                        explorerHash: res.hash
+                    }, async () => {
+                        let receipt = await res.wait()
+                        console.log('receipt: ', receipt)
+                        if (receipt !== null && receipt !== undefined) {
+                            this.setState({
+                                msgModalVisible: true,
+                                mintModalVisible: false
+                            })
+                        }
+                    })
+
+                }
+            } catch(err) {
+                console.log('mint call failed: ', err)
+            }
+        })
+    }
+
+    handleNewChain = (chainId) => {
+        this.setState({
+            chainId: chainId
+        })
+    }
+
+    handleNewNetwork = (networkId) => {
+        this.setState({
+            networkId: Number(networkId)
+        })
+    }
+
+    handleNewAccounts = (addr) =>  {
+        let address = addr === undefined || addr.length < 1 ? '' : addr[0]
+        this.setState({
+            address: address
+        })
+    }
+
+    updateAccounts = async (addr) => {
+        console.log('account updated: ', addr)
+        this.setState({
+            loading:true
+        }, async () => {
+            this.handleNewAccounts(addr)
+            await this.readContractInfo()
+        })
+
+    }
+
+    initWeb3 = async () => {
+        if (window.ethereum) {
+            try {
+                await window.ethereum.enable();
+            } catch (err) {
+                console.error('Error on init when getting accounts', err)
+            }
+            try {
+                const newAccounts = await window.ethereum.request({
+                    method: 'eth_accounts',
+                })
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId',
+                })
+
+                const networkId = await window.ethereum.request({
+                    method: 'net_version',
+                })
+                this.handleNewChain(chainId)
+                this.handleNewNetwork(networkId)
+                this.handleNewAccounts(newAccounts)
+            } catch (err) {
+                console.log('check network failed: ', err)
+            }
+            window.ethereum.autoRefreshOnNetworkChange = false
+            window.ethereum.on('chainChanged', this.handleNewChain)
+            window.ethereum.on('networkChanged', this.handleNewNetwork)
+            window.ethereum.on('accountsChanged', this.updateAccounts)
+            this.setState({
+                startWatch: true
+            })
+            await this.readContractInfo()
+        } else {
+            console.log('oops!')
+        }
+
+    }
+
+    readContractInfo = async () => {
+        this.provider = ethers.getDefaultProvider(this.state.networkId)
+        // this.contract = new ethers.Contract(Contract.address, Contract.abi, this.provider)
+        this.signer = (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
+        this.contract = new ethers.Contract(Contract.address, Contract.abi, this.signer)
+        try {
+            let maxSupply = await this.contract.maxSupply()
+
+            let maxMintAmount = await this.contract.maxMintAmount()
+
+            let nftPerAddressLimit = await this.contract.nftPerAddressLimit()
+
+            let onlyWhitelisted = await this.contract.onlyWhitelisted()
+
+            let paused = await this.contract.paused()
+
+            let cost = await this.contract.cost()
+
+            let availableAmount = await this.contract.availableAmount()
+
+            let isWhiteListed = await this.contract.isWhitelisted(this.state.address)
+
+            let owner = await this.contract.owner()
+
+            this.setState({
+                maxSupply: ethers.BigNumber.from(maxSupply).toNumber(),
+                maxMintAmount: ethers.BigNumber.from(maxMintAmount).toNumber(),
+                nftPerAddressLimit: ethers.BigNumber.from(nftPerAddressLimit).toNumber(),
+                cost: Number(ethers.utils.formatEther(cost)),
+                availableAmount: ethers.BigNumber.from(availableAmount).toNumber(),
+                paused,
+                isWhiteListed,
+                onlyWhitelisted, owner,
+                soldOut: ethers.BigNumber.from(availableAmount).toNumber() === 0,
+                loading: false
+            })
+        } catch(err) {
+            console.log('read contract info error: ', err)
+        }
+    }
+
+    sameAddress = (addr1, addr2) => {
+        console.log('here: ', addr1, addr2, addr1.toLowerCase() === addr2.toLowerCase())
+        return addr1.toLowerCase() === addr2.toLowerCase();
+
+    }
+
+    async componentDidMount() {
         document.querySelectorAll('#roadmap .line, #roadmap .circle').forEach(el => {
             gsap.timeline({
                 scrollTrigger: {
@@ -119,6 +319,8 @@ class HomePage extends React.Component {
                 }
             }
         })
+
+        await this.initWeb3()
     }
 
     componentWillUnmount() {
@@ -126,6 +328,8 @@ class HomePage extends React.Component {
     }
 
     render() {
+        const { loading, maxSupply, maxMintAmount, availableAmount, cost, paused, nftPerAddressLimit, isWhitelisted, onlyWhitelisted, address, owner, soldOut } = this.state
+
         const TeamMembers = TeamMemberData.map(member => (
             <TeamMember {...member} key={member.name} className={'col-12 col-sm-6 col-lg-3'}/>
         ))
@@ -164,7 +368,7 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Button size={"lg"}>
+                        <Button size={"lg"} onClick={this.handleOpen}>
                             <FontAwesomeIcon icon={['fas', 'coins']}/>
                             MiNT NOW!!!
                         </Button>
@@ -398,6 +602,135 @@ class HomePage extends React.Component {
                         </div>
                     </div>
                 </div>
+                <Modal
+                    open={this.state.mintModalVisible}
+                    onClose={() => {
+                        this.handleClose()
+                    }}
+                    disableEnforceFocus
+                    className="wrapper modal"
+                    aria-labelledby="simple-modal-title"
+                    aria-describedby="simple-modal-description"
+                 >
+                    <Fade in={this.state.mintModalVisible}>
+                        {/* <Fade in={true}> */}
+                        <div style={{ backgroundColor: 'black', width: 660, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', borderRadius: 16 }}>
+                            <Typography style={{ fontSize: 34, color: 'white', fontWeight: 'bolder', marginBottom: 24, marginTop: 24, marginLeft: 24, marginRight: 24 }} className={''}>{'Minting Information'}</Typography>
+                            {
+                                loading ?
+                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                        <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+                                            <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                                {'Loading ...'}
+                                            </Typography>
+                                        </div>
+                                    </div> :
+                                        soldOut ?
+                                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                            <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                                <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                                    {'All Crypto Chimpz NFT has been minted !'}
+                                                </Typography>
+                                            </div>
+                                        </div> :
+                                            paused ?
+                                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                                <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                                    <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                                        {'Minting temporarily paused, please wait for further information'}
+                                                    </Typography>
+                                                </div>
+                                            </div> :
+                                                !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) ?
+                                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                                    <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                                        <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                                            {'Your address is not registered for pre-sale. Public sale will start soon !'}
+                                                        </Typography>
+                                                    </div>
+                                                </div> :
+                                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                                        <div style={{ width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                                            <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>
+                                                                {'Available/Total'}
+                                                            </Typography>
+
+                                                            <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>
+                                                                {`${this.state.availableAmount} / ${this.state.maxSupply}`}
+                                                            </Typography>
+                                                        </div>
+
+                                                        <CustomTextField
+                                                            label={'Mint Amount'}
+                                                            type="text"
+                                                            style={{ width: '75%', textTransform: 'none' }}
+                                                            rightbuttonlabel={''}
+                                                            helperText={this.state.mintModalWarning}
+                                                            error={this.state.mintModalWarning !== ''}
+                                                            showcancellbutton={true}
+                                                            onChange={(e) => this.handleAmountChange(e.target.value)}
+                                                            // variant="standard"
+                                                            value={this.state.mintAmount}
+                                                            disabled={false}
+                                                            customtype="number"
+                                                        />
+
+                                                        <Button
+                                                            style={{ borderColor: 'white', opacity: 1, backgroundColor: 'white', height: 40, bottom: 10, borderRadius: 16, width: '20%', marginTop: 20, marginBottom: 20 }}
+                                                            onClick={this.handleMint}
+                                                            disabled={false}
+                                                        >
+                                                            <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'black' }}>
+                                                                {'MINT'}
+                                                            </Typography>
+                                                        </Button>
+                                                    </div>
+                            }
+                        </div>
+                    </Fade>
+                </Modal>
+
+                <Modal
+                    open={this.state.msgModalVisible}
+                    onClose={() => {
+                        this.closeMsgModal()
+                    }}
+                    disableEnforceFocus
+                    className="wrapper modal"
+                    aria-labelledby="simple-modal-title"
+                    aria-describedby="simple-modal-description"
+                >
+                    <Fade in={this.state.msgModalVisible}>
+                        {/* <Fade in={true}> */}
+                        <div style={{ backgroundColor: 'black', width: 660, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', borderRadius: 16 }}>
+                            <Typography style={{ fontSize: 34, color: 'white', fontWeight: 'bolder', marginBottom: 24, marginTop: 24, marginLeft: 24, marginRight: 24 }} className={''}>{'Mint Requested'}</Typography>
+
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+                                    <Button
+                                        style={{ borderColor: 'white', opacity: 1, backgroundColor: 'white', height: 40, bottom: 10, borderRadius: 16, width: '20%', marginTop: 20, marginBottom: 20 }}
+                                        onClick={this.goToEtherscan}
+                                        disabled={false}
+                                    >
+                                        <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'black' }}>
+                                            {'Check on Etherscan'}
+                                        </Typography>
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <Button
+                                style={{ borderColor: 'white', opacity: 1, backgroundColor: 'white', height: 40, bottom: 10, borderRadius: 16, width: '20%', marginTop: 20, marginBottom: 20 }}
+                                onClick={this.closeMsgModal}
+                                disabled={false}
+                            >
+                                <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'black' }}>
+                                    {'Close'}
+                                </Typography>
+                            </Button>
+                        </div>
+                    </Fade>
+                </Modal>
             </div>
         )
     }

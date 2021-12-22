@@ -1,0 +1,26 @@
+.textfield__label{
+    color: white !important;
+    margin-top: -4px;
+    font-weight: bold;
+    font-size: 14px !important;
+    font-weight: bold !important;
+
+}
+
+.textfield__helperText{
+    color: #FF4646 !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+}
+
+
+.dropBox__label{
+    color: #111C6F !important;
+    /*
+        margin-top: -26px;
+
+        font-weight: bold;
+        font-size: 14px !important; */
+    font-weight: bold !important;
+
+}
