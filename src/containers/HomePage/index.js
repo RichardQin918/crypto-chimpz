@@ -1,11 +1,11 @@
 import React from "react";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {Button, Form} from 'react-bootstrap';
+import {Button, Form, InputGroup} from 'react-bootstrap';
 import Carousel from './Carousel'
 import TeamMember from "components/TeamMember";
 import FAQ from "components/FAQ";
 import Image from 'components/Image'
-import CustomModal from 'components/Modal'
+import Modal from 'components/Modal'
 import {Formik} from "formik";
 import * as yup from 'yup'
 
@@ -21,18 +21,18 @@ import FAQData from 'data/faq'
 import ReactCanvasConfetti from "react-canvas-confetti";
 import ClassNames from "classnames";
 
-import { Modal, Fade, Grid, Typography } from '@material-ui/core'
-import CustomTextField from "../../components/CustomTextField/CustomTextField";
+import {Typography} from '@material-ui/core'
 
-import { ethers } from "ethers";
+import {ethers} from "ethers";
 import Contract from '../../config/Contract.json'
 
 import MetaMaskOnboarding from "@metamask/onboarding";
+
 const currentUrl = new URL(window.location.href)
 const forwarderOrigin = currentUrl.hostname === 'localhost'
     ? 'http://localhost:9010'
     : undefined
-export const onBoard = new MetaMaskOnboarding({ forwarderOrigin })
+export const onBoard = new MetaMaskOnboarding({forwarderOrigin})
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -53,7 +53,6 @@ class HomePage extends React.Component {
             address: '',
             networkId: 0,
             chainId: 0,
-            mintModalWarning: '',
             startWatch: false,
 
             availableAmount: 0,
@@ -70,8 +69,6 @@ class HomePage extends React.Component {
 
             msgModalVisible: false,
             explorerHash: '',
-
-            newModalVisible: false
         }
 
         this.confettiTrigger = null
@@ -79,8 +76,9 @@ class HomePage extends React.Component {
         this.validationSchema = yup.object().shape({
             amount: yup
                 .number()
-                .required('Amount is required')
-                .positive('Please enter a positive amount')
+                .required('Mint amount is required')
+                .positive('Mint amount has to be positive')
+                .integer('Mint amount has to be an integer')
                 .test({
                     name: 'checkSufficientAmount',
                     message: 'Replace validator here, try amount > 999',
@@ -99,11 +97,11 @@ class HomePage extends React.Component {
     }
 
     openMintModal() {
-        this.setState({newModalVisible: true})
+        this.setState({mintModalVisible: true})
     }
 
     closeMintModal() {
-        this.setState({newModalVisible: false})
+        this.setState({mintModalVisible: false})
     }
 
     toggleFAQ(question) {
@@ -152,22 +150,6 @@ class HomePage extends React.Component {
         this.animationInstance = instance;
     };
 
-    handleClose = () => {
-        this.setState({mintModalVisible: false})
-    }
-
-    handleOpen = () => {
-        this.setState({mintModalVisible: true})
-    }
-
-    handleAmountChange = (amount) => {
-        this.setState({
-            mintAmount: amount
-        })
-
-
-    }
-
     closeMsgModal = () => {
         this.setState({
             msgModalVisible: false
@@ -175,12 +157,12 @@ class HomePage extends React.Component {
     }
 
     goToEtherscan = () => {
-        const { explorerHash } = this.state
+        const {explorerHash} = this.state
         window.open(`https://rinkeby.etherscan.io/tx/${explorerHash}`, "_blank")
     }
 
     handleMint = async () => {
-        const { mintAmount, address } = this.state
+        const {mintAmount, address} = this.state
         console.log('minting !: ', mintAmount, address)
         this.setState({
             mintDone: false
@@ -203,7 +185,7 @@ class HomePage extends React.Component {
                     })
 
                 }
-            } catch(err) {
+            } catch (err) {
                 console.log('mint call failed: ', err)
             }
         })
@@ -221,7 +203,7 @@ class HomePage extends React.Component {
         })
     }
 
-    handleNewAccounts = (addr) =>  {
+    handleNewAccounts = (addr) => {
         let address = addr === undefined || addr.length < 1 ? '' : addr[0]
         this.setState({
             address: address
@@ -231,7 +213,7 @@ class HomePage extends React.Component {
     updateAccounts = async (addr) => {
         console.log('account updated: ', addr)
         this.setState({
-            loading:true
+            loading: true
         }, async () => {
             this.handleNewAccounts(addr)
             await this.readContractInfo()
@@ -310,7 +292,7 @@ class HomePage extends React.Component {
                 soldOut: ethers.BigNumber.from(availableAmount).toNumber() === 0,
                 loading: false
             })
-        } catch(err) {
+        } catch (err) {
             console.log('read contract info error: ', err)
         }
     }
@@ -393,7 +375,20 @@ class HomePage extends React.Component {
     }
 
     render() {
-        const { loading, maxSupply, maxMintAmount, availableAmount, cost, paused, nftPerAddressLimit, isWhitelisted, onlyWhitelisted, address, owner, soldOut } = this.state
+        const {
+            loading,
+            maxSupply,
+            maxMintAmount,
+            availableAmount,
+            cost,
+            paused,
+            nftPerAddressLimit,
+            isWhitelisted,
+            onlyWhitelisted,
+            address,
+            owner,
+            soldOut
+        } = this.state
 
         const TeamMembers = TeamMemberData.map(member => (
             <TeamMember {...member} key={member.name} className={'col-12 col-sm-6 col-lg-3'}/>
@@ -433,7 +428,8 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Button size={"lg"} onClick={() => window.ethereum ? this.handleOpen() : onBoard.startOnboarding()}>
+                        <Button size={"lg"}
+                                onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}>
                             <FontAwesomeIcon icon={['fas', 'coins']}/>
                             MiNT NOW!!!
                         </Button>
@@ -682,187 +678,135 @@ class HomePage extends React.Component {
                         </div>
                     </div>
                 </div>
-                <Modal
-                    open={this.state.mintModalVisible}
-                    onClose={() => {
-                        this.handleClose()
-                    }}
-                    disableEnforceFocus
-                    className="wrapper modal"
-                    aria-labelledby="simple-modal-title"
-                    aria-describedby="simple-modal-description"
-                 >
-                    <Fade in={this.state.mintModalVisible}>
-                        {/* <Fade in={true}> */}
-                        <div style={{ backgroundColor: 'black', width: 660, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', borderRadius: 16 }}>
-                            <Typography style={{ fontSize: 34, color: 'white', fontWeight: 'bolder', marginBottom: 24, marginTop: 24, marginLeft: 24, marginRight: 24 }} className={''}>{'Minting Information'}</Typography>
-                            {
-                                loading ?
-                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                        <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
-                                            <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                                {'Loading ...'}
-                                            </Typography>
-                                        </div>
-                                    </div> :
-                                        // soldOut ?
-                                        // <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                        //     <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                        //         <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                        //             {'All Crypto Chimpz NFT has been minted !'}
-                                        //         </Typography>
-                                        //     </div>
-                                        // </div> :
-                                        //     paused ?
-                                        //     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                        //         <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                        //             <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                        //                 {'Minting temporarily paused, please wait for further information'}
-                                        //             </Typography>
-                                        //         </div>
-                                        //     </div> :
-                                        //         !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) ?
-                                        //         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                        //             <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                        //                 <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                        //                     {'Your address is not registered for pre-sale. Public sale will start soon !'}
-                                        //                 </Typography>
-                                        //             </div>
-                                        //         </div> :
-                                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                                        <div style={{ width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                                            <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>
-                                                                {'Available/Total'}
-                                                            </Typography>
-
-                                                            <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>
-                                                                {`${this.state.availableAmount} / ${this.state.maxSupply}`}
-                                                            </Typography>
-                                                        </div>
-
-                                                        <CustomTextField
-                                                            label={'Mint Amount'}
-                                                            type="text"
-                                                            style={{ width: '75%', textTransform: 'none' }}
-                                                            rightbuttonlabel={''}
-                                                            helperText={this.state.mintModalWarning}
-                                                            error={this.state.mintModalWarning !== ''}
-                                                            showcancellbutton={true}
-                                                            onChange={(e) => this.handleAmountChange(e.target.value)}
-                                                            // variant="standard"
-                                                            value={this.state.mintAmount}
-                                                            disabled={false}
-                                                            customtype="number"
-                                                        />
-
-                                                        <Button
-                                                            style={{ borderColor: 'white', opacity: 1, backgroundColor: 'white', height: 40, bottom: 10, borderRadius: 16, width: '20%', marginTop: 20, marginBottom: 20 }}
-                                                            onClick={this.handleMint}
-                                                            disabled={false}
-                                                        >
-                                                            <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'black' }}>
-                                                                {'MINT'}
-                                                            </Typography>
-                                                        </Button>
-                                                    </div>
-                            }
-                        </div>
-                    </Fade>
-                </Modal>
 
                 <Modal
-                    open={this.state.msgModalVisible}
-                    onClose={() => {
-                        this.closeMsgModal()
-                    }}
-                    disableEnforceFocus
-                    className="wrapper modal"
-                    aria-labelledby="simple-modal-title"
-                    aria-describedby="simple-modal-description"
+                    width="300px" showHeader={false}
+                    visible={this.state.msgModalVisible}
+                    onClose={this.closeMsgModal}
                 >
-                    <Fade in={this.state.msgModalVisible}>
-                        {/* <Fade in={true}> */}
-                        <div style={{ backgroundColor: 'black', width: 660, display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', borderRadius: 16 }}>
-                            <Typography style={{ fontSize: 34, color: 'white', fontWeight: 'bolder', marginBottom: 24, marginTop: 24, marginLeft: 24, marginRight: 24 }} className={''}>{'Mint Requested'}</Typography>
-
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
-                                    <Button
-                                        style={{ borderColor: 'white', opacity: 1, backgroundColor: 'white', height: 40, bottom: 10, borderRadius: 16, width: '20%', marginTop: 20, marginBottom: 20 }}
-                                        onClick={this.goToEtherscan}
-                                        disabled={false}
-                                    >
-                                        <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'black' }}>
-                                            {'Check on Etherscan'}
-                                        </Typography>
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <Button
-                                style={{ borderColor: 'white', opacity: 1, backgroundColor: 'white', height: 40, bottom: 10, borderRadius: 16, width: '20%', marginTop: 20, marginBottom: 20 }}
-                                onClick={this.closeMsgModal}
-                                disabled={false}
-                            >
-                                <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'black' }}>
-                                    {'Close'}
-                                </Typography>
+                    <div className="status">
+                        <FontAwesomeIcon icon={'check-circle'}/>
+                        <div className="message">
+                            Mint Requested <br/><br/>
+                            <Button variant={'primary'} onClick={this.goToEtherscan}>
+                                Check On Etherscan
                             </Button>
                         </div>
-                    </Fade>
+                    </div>
                 </Modal>
 
-                <CustomModal
-                    width="400px" title={'This is a title'}
-                    visible={this.state.newModalVisible}
+                <Modal
+                    width="400px" title={'Mint Information'}
+                    visible={this.state.mintModalVisible}
                     onClose={this.closeMintModal}
+                    loading={loading} loadingText={'Loading Mint Information'}
                 >
-                    <Formik
-                        initialValues={{amount: ''}}
-                        validationSchema={this.validationSchema}
-                        onSubmit={(values, {setSubmitting, resetForm}) => {
-                            setSubmitting(true)
-                            setTimeout(() => {
-                                alert(JSON.stringify(values))
-                                resetForm()
-                                setSubmitting(false)
-                            }, 1000)
-                        }}
-                    >
-                        {({
-                              values,
-                              errors,
-                              touched,
-                              handleChange,
-                              handleBlur,
-                              handleSubmit,
-                              isSubmitting
-                          }) => (
-                            <Form onSubmit={handleSubmit} className={'row g-3'}>
-                                <Form.Group controlId={'formAmount'} className={'col-12'}>
-                                    <Form.Label>Amount</Form.Label>
-                                    <Form.Control
-                                        type={'number'} placeholder={'This is a placeholder'}
-                                        name={'amount'} value={values.amount}
-                                        className={ClassNames([touched.amount ? (errors.amount ? 'is-invalid' : 'is-valid') : ''])}
-                                        onChange={handleChange}
-                                        onBlur={handleBlur}
-                                    />
-                                    {touched.amount && errors.amount ? (
-                                        <div className="invalid-feedback">{errors.amount}</div>
-                                    ) : null}
-                                </Form.Group>
-                                <div className="col-12 text-end">
-                                    <Button className={'mint-btn'} variant={'primary'} type={'submit'}
-                                            disabled={isSubmitting}>
-                                        {isSubmitting && <FontAwesomeIcon icon={'spinner-third'} spin/>}
-                                        MiNT
-                                    </Button>
+                    {
+                        soldOut && false ?
+                            <div className="status">
+                                <FontAwesomeIcon icon={'empty-set'}/>
+                                <div className={'message'}>All Crypto Chimpz NFT has been minted!</div>
+                            </div>
+                            : paused && false ?
+                                <div className="status">
+                                    <FontAwesomeIcon icon={'pause-circle'}/>
+                                    <div className={'message'}>Minting temporarily paused, please wait for further
+                                        information
+                                    </div>
                                 </div>
-                            </Form>
-                        )}
-                    </Formik>
-                </CustomModal>
+                                : !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) && false ?
+                                    <div className="status">
+                                        <FontAwesomeIcon icon={'hourglass-half'}/>
+                                        <div className={'message'}>Your address is not registered for pre-sale. Public sale
+                                            will start soon!
+                                        </div>
+                                    </div>
+                                    : <>
+                                        <Typography
+                                            style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
+                                            {'Available/Total'}
+                                        </Typography>
+
+                                        <Typography
+                                            style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
+                                            {`${this.state.availableAmount} / ${this.state.maxSupply}`}
+                                        </Typography>
+
+                                        <Formik
+                                            initialValues={{amount: ''}}
+                                            validationSchema={this.validationSchema}
+                                            onSubmit={(values, {setSubmitting, resetForm}) => {
+                                                setSubmitting(true)
+                                                setTimeout(() => {
+                                                    alert(JSON.stringify(values))
+                                                    resetForm()
+                                                    setSubmitting(false)
+                                                }, 1000)
+                                            }}
+                                        >
+                                            {
+                                                ({
+                                                     values,
+                                                     errors,
+                                                     touched,
+                                                     handleChange,
+                                                     handleBlur,
+                                                     handleSubmit,
+                                                     isSubmitting,
+                                                     setFieldValue,
+                                                     setFieldTouched,
+                                                 }) => (
+                                                    <Form onSubmit={handleSubmit} className={'row g-3'}>
+                                                        <Form.Group controlId={'formAmount'} className={'col-12'}>
+                                                            <Form.Label>Amount</Form.Label>
+                                                            <InputGroup
+                                                                size={'lg'}
+                                                                className={ClassNames([{'is-invalid': errors.amount}])}>
+                                                                <Button variant={'outline-secondary'} onClick={() => {
+                                                                    setFieldValue('amount', --values.amount)
+                                                                    setFieldTouched('amount')
+                                                                }}>
+                                                                    <FontAwesomeIcon icon={'minus'}
+                                                                                     style={{marginRight: 0}}/>
+                                                                </Button>
+                                                                <Form.Control
+                                                                    type={'number'} placeholder={'Enter amount'}
+                                                                    name={'amount'} value={values.amount}
+                                                                    className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
+                                                                    autoComplete={'off'}
+                                                                    onChange={handleChange}
+                                                                    onBlur={handleBlur}
+                                                                />
+                                                                <Button variant={'outline-secondary'} onClick={() => {
+                                                                    setFieldValue('amount', ++values.amount)
+                                                                    setFieldTouched('amount')
+                                                                }}>
+                                                                    <FontAwesomeIcon icon={'plus'}
+                                                                                     style={{marginRight: 0}}/>
+                                                                </Button>
+                                                            </InputGroup>
+                                                            {touched.amount && errors.amount ? (
+                                                                <div className="invalid-feedback">{errors.amount}</div>
+                                                            ) : null}
+                                                        </Form.Group>
+                                                        <div className="col-12 text-end">
+                                                            <Button className={'mint-btn w-100'} variant={'primary'}
+                                                                    type={'submit'}
+                                                                    disabled={isSubmitting}>
+                                                                {isSubmitting &&
+                                                                    <FontAwesomeIcon icon={'spinner-third'} spin/>}
+                                                                MiNT
+                                                            </Button>
+                                                        </div>
+                                                    </Form>
+                                                )
+                                            }
+                                        </Formik>
+                                    </>
+
+                    }
+
+                </Modal>
             </div>
         )
     }
