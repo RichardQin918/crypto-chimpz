@@ -56,19 +56,26 @@ class HomePage extends React.Component {
             startWatch: false,
 
             availableAmount: 0,
+            availablePresaleAmount: 0,
             maxSupply: 0,
+            maxPresaleSupply: 0,
             maxMintAmount: 0,
             nftPerAddressLimit: 0,
+            nftPerAddressPresaleLimit: 0,
             paused: false,
             onlyWhitelisted: false,
             isWhitelisted: false,
             cost: 0,
+            presaleCost: 0,
             loading: true,
             owner: '',
             soldOut: false,
 
             msgModalVisible: false,
             explorerHash: '',
+
+            addressMintedPresaleBalance: 0,
+            addressMintedBalance: 0
         }
 
         this.confettiTrigger = null
@@ -76,26 +83,6 @@ class HomePage extends React.Component {
         this.openMintModal = this.openMintModal.bind(this)
         this.closeMintModal = this.closeMintModal.bind(this)
         this.toggleFAQ = this.toggleFAQ.bind(this)
-        this.validateAmount = this.validateAmount.bind(this)
-
-        this.validationSchema = yup.object().shape({
-            amount: yup
-                .number()
-                .required('Mint amount is required')
-                .positive('Mint amount has to be positive')
-                .integer('Mint amount has to be an integer')
-                .test({
-                    name: 'checkSufficientAmount',
-                    message: 'Replace validator here, try amount > 999',
-                    test: this.validateAmount
-                })
-        })
-    }
-
-    validateAmount(amount) {
-        const { availableAmount } = this.state
-        console.log('av: ', availableAmount, typeof amount, amount)
-        return amount <= availableAmount
     }
 
     openMintModal() {
@@ -163,14 +150,13 @@ class HomePage extends React.Component {
         window.open(`https://rinkeby.etherscan.io/tx/${explorerHash}`, "_blank")
     }
 
-    handleMint = async () => {
-        const {mintAmount, address} = this.state
-        console.log('minting !: ', mintAmount, address)
+    handleMint = async (values) => {
+        const {address} = this.state
         this.setState({
             mintDone: false
         }, async () => {
             try {
-                let res = await this.contract.mint(mintAmount)
+                let res = await this.contract.mint(address, values.amount)
                 console.log('res: ', res.hash)
                 if (res.hash !== null) {
                     this.setState({
@@ -213,7 +199,6 @@ class HomePage extends React.Component {
     }
 
     updateAccounts = async (addr) => {
-        console.log('account updated: ', addr)
         this.setState({
             loading: true
         }, async () => {
@@ -253,12 +238,14 @@ class HomePage extends React.Component {
             window.ethereum.on('accountsChanged', this.updateAccounts)
             this.setState({
                 startWatch: true
+            }, async () => {
+                await this.readContractInfo()
             })
-            await this.readContractInfo()
         }
     }
 
     readContractInfo = async () => {
+        const { address } = this.state
         this.provider = ethers.getDefaultProvider(this.state.networkId)
         // this.contract = new ethers.Contract(Contract.address, Contract.abi, this.provider)
         this.signer = (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
@@ -266,9 +253,13 @@ class HomePage extends React.Component {
         try {
             let maxSupply = await this.contract.maxSupply()
 
+            let maxPresaleSupply = await this.contract.maxPresaleSupply()
+
             let maxMintAmount = await this.contract.maxMintAmount()
 
             let nftPerAddressLimit = await this.contract.nftPerAddressLimit()
+
+            let nftPerAddressPresaleLimit = await this.contract.nftPerAddressPresaleLimit()
 
             let onlyWhitelisted = await this.contract.onlyWhitelisted()
 
@@ -276,23 +267,59 @@ class HomePage extends React.Component {
 
             let cost = await this.contract.cost()
 
+            let presaleCost = await this.contract.presaleCost()
+
             let availableAmount = await this.contract.availableAmount()
 
-            let isWhiteListed = await this.contract.isWhitelisted(this.state.address)
+            let availablePresaleAmount = await this.contract.availablePresaleAmount()
+
+            let isWhitelisted = await this.contract.isWhitelisted(address)
 
             let owner = await this.contract.owner()
 
+            let addressMintedBalance = await this.contract.addressMintedBalance(address)
+
+            let addressMintedPresaleBalance = await this.contract.addressMintedPresaleBalance(address)
+
             this.setState({
                 maxSupply: ethers.BigNumber.from(maxSupply).toNumber(),
+                maxPresaleSupply: ethers.BigNumber.from(maxPresaleSupply).toNumber(),
                 maxMintAmount: ethers.BigNumber.from(maxMintAmount).toNumber(),
                 nftPerAddressLimit: ethers.BigNumber.from(nftPerAddressLimit).toNumber(),
+                nftPerAddressPresaleLimit: ethers.BigNumber.from(nftPerAddressPresaleLimit).toNumber(),
                 cost: Number(ethers.utils.formatEther(cost)),
+                presaleCost: Number(ethers.utils.formatEther(presaleCost)),
                 availableAmount: ethers.BigNumber.from(availableAmount).toNumber(),
+                availablePresaleAmount: ethers.BigNumber.from(availablePresaleAmount).toNumber(),
+                addressMintedPresaleBalance: ethers.BigNumber.from(addressMintedPresaleBalance).toNumber(),
+                addressMintedBalance: ethers.BigNumber.from(addressMintedBalance).toNumber(),
                 paused,
-                isWhiteListed,
+                isWhitelisted,
                 onlyWhitelisted, owner,
                 soldOut: ethers.BigNumber.from(availableAmount).toNumber() === 0,
                 loading: false
+            }, () => {
+                const { availableAmount, availablePresaleAmount, nftPerAddressLimit, nftPerAddressPresaleLimit, maxMintAmount, onlyWhitelisted, owner, addressMintedBalance, addressMintedPresaleBalance, address } = this.state
+                console.log('limit: ', nftPerAddressLimit, addressMintedBalance)
+                this.validationSchema = yup.object().shape({
+                    amount: yup
+                        .number()
+                        .required('Mint amount is required')
+                        .positive('Mint amount has to be positive')
+                        .integer('Mint amount has to be an integer')
+                        .test({
+                            name: 'checkSufficientAmount',
+                            message: `Current address available minting limit: ${onlyWhitelisted ? nftPerAddressPresaleLimit - addressMintedPresaleBalance : nftPerAddressLimit - addressMintedBalance} `
+                           + '\n' + `Available NFT for current stage: ${onlyWhitelisted ? availablePresaleAmount : availableAmount}`,
+                            test: (amount) => {
+                                console.log('check1 !: ', )
+                                let test1 =  (onlyWhitelisted && amount <= availablePresaleAmount) || (!onlyWhitelisted && amount <= availableAmount)
+                                let test2 = this.sameAddress(owner, address) || (!this.sameAddress(owner, address) && ((onlyWhitelisted && amount + addressMintedPresaleBalance <= nftPerAddressPresaleLimit) || (!onlyWhitelisted && amount + addressMintedBalance <= nftPerAddressLimit)))
+                                let test3 = amount <= maxMintAmount
+                                return test1 && test2 && test3
+                            }
+                        })
+                })
             })
         } catch (err) {
             console.log('read contract info error: ', err)
@@ -300,7 +327,6 @@ class HomePage extends React.Component {
     }
 
     sameAddress = (addr1, addr2) => {
-        console.log('here: ', addr1, addr2, addr1.toLowerCase() === addr2.toLowerCase())
         return addr1.toLowerCase() === addr2.toLowerCase();
 
     }
@@ -372,10 +398,6 @@ class HomePage extends React.Component {
         this.confettiTrigger && this.confettiTrigger.kill()
     }
 
-    mint() {
-        console.log('Minting')
-    }
-
     render() {
         const {
             loading,
@@ -383,13 +405,15 @@ class HomePage extends React.Component {
             maxMintAmount,
             availableAmount,
             cost,
+            presaleCost,
             paused,
             nftPerAddressLimit,
             isWhitelisted,
             onlyWhitelisted,
             address,
             owner,
-            soldOut
+            soldOut,
+            amount
         } = this.state
 
         const TeamMembers = TeamMemberData.map(member => (
@@ -724,23 +748,13 @@ class HomePage extends React.Component {
                                         </div>
                                     </div>
                                     : <>
-                                        <Typography
-                                            style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
-                                            {'Available/Total'}
-                                        </Typography>
-
-                                        <Typography
-                                            style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
-                                            {`${this.state.availableAmount} / ${this.state.maxSupply}`}
-                                        </Typography>
-
                                         <Formik
                                             initialValues={{amount: ''}}
                                             validationSchema={this.validationSchema}
-                                            onSubmit={(values, {setSubmitting, resetForm}) => {
+                                            onSubmit={async (values, {setSubmitting, resetForm}) => {
                                                 setSubmitting(true)
-                                                setTimeout(() => {
-                                                    alert(JSON.stringify(values))
+                                                setTimeout(async () => {
+                                                    await this.handleMint(values)
                                                     resetForm()
                                                     setSubmitting(false)
                                                 }, 1000)
@@ -759,6 +773,17 @@ class HomePage extends React.Component {
                                                      setFieldTouched,
                                                  }) => (
                                                     <Form onSubmit={handleSubmit} className={'row g-3'}>
+
+                                                        <Typography
+                                                            style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
+                                                            {'Estimated Cost:'}
+                                                        </Typography>
+
+                                                        <Typography
+                                                            style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
+                                                            {`${values.amount === '' ? '--' : onlyWhitelisted ? presaleCost * parseFloat(values.amount) : cost * parseFloat(values.amount)} ETH`}
+                                                        </Typography>
+
                                                         <Form.Group controlId={'formAmount'} className={'col-12'}>
                                                             <Form.Label>Amount</Form.Label>
                                                             <InputGroup
