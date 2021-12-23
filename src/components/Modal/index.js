@@ -1,9 +1,10 @@
-import React from 'react'
+import React, {useState} from 'react'
 import {CSSTransition} from "react-transition-group";
 import ClassNames from "classnames";
 import PropTypes from "prop-types";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Fragment, useEffect} from "react";
+import PopupManager from 'utils/PopupManager'
 
 import './Modal.scoped.scss'
 
@@ -18,9 +19,13 @@ function Modal(props) {
         props.onClose()
     }
 
+    const [zIndex, setZIndex] = useState(PopupManager.zIndex)
+
     useEffect(() => {
         if (props.visible) {
             lockBodyScroll()
+            setZIndex(PopupManager.zIndex)
+            PopupManager.nextZIndex()
         } else {
             unlockBodyScroll()
         }
@@ -51,7 +56,9 @@ function Modal(props) {
     }
 
     return (
-        <div ref={modalRef} className={ClassNames(['modal-wrapper', {active: props.visible}])}>
+        <div ref={modalRef} className={ClassNames(['modal-wrapper', {active: props.visible}])}
+             style={{zIndex: zIndex}}
+        >
             <CSSTransition in={props.visible} timeout={500} classNames={'fade'} unmountOnExit>
                 <div className="backdrop" onClick={() => props.closeOnClickModal && handleClose()}/>
             </CSSTransition>
