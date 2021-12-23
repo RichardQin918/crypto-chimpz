@@ -702,19 +702,19 @@ class HomePage extends React.Component {
                     loading={loading} loadingText={'Loading Mint Information'}
                 >
                     {
-                        soldOut && false ?
+                        soldOut ?
                             <div className="status">
                                 <FontAwesomeIcon icon={'empty-set'}/>
                                 <div className={'message'}>All Crypto Chimpz NFT has been minted!</div>
                             </div>
-                            : paused && false ?
+                            : paused ?
                                 <div className="status">
                                     <FontAwesomeIcon icon={'pause-circle'}/>
                                     <div className={'message'}>Minting temporarily paused, please wait for further
                                         information
                                     </div>
                                 </div>
-                                : !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) && false ?
+                                : !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) ?
                                     <div className="status">
                                         <FontAwesomeIcon icon={'hourglass-half'}/>
                                         <div className={'message'}>Your address is not registered for pre-sale. Public sale
