@@ -9,6 +9,7 @@ import scrollWithOffset from "utils/scrollWithOffset";
 import './Header.scoped.scss'
 import './Header.scss'
 import Logo from 'assets/logo-white.png'
+import Image from "components/Image";
 
 class Header extends React.Component {
     constructor(props) {
@@ -29,7 +30,7 @@ class Header extends React.Component {
             <header>
                 <div className="wrapper">
                     <div className="container">
-                        <img src={Logo} alt="Crypto Chimpz" className="logo"/>
+                        <Image src={Logo} aspectRatio={'537:160'} alt="Crypto Chimpz" className="logo"/>
                         <div className="spacer"/>
                         <div className="menu">
                             <Link className="item" scroll={scrollWithOffset} to="#about">About</Link>
@@ -46,11 +47,11 @@ class Header extends React.Component {
                 </div>
                 <Collapse isOpened={this.state.active}>
                     <div className={ClassNames(['mobile-menu'])}>
-                        <Link className="item" to="#about">About</Link>
-                        <Link className="item" to="#roadmap">Roadmap</Link>
-                        <Link className="item" to="#roadmap-101">101% Roadmap</Link>
-                        <Link className="item" to="#faq">FAQ</Link>
-                        <Link className="item" to="#team">The Team</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#about">About</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#roadmap">Roadmap</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#roadmap-101">101% Roadmap</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#faq">FAQ</Link>
+                        <Link className="item" onClick={this.toggleMobileMenu} scroll={scrollWithOffset} to="#team">The Team</Link>
                     </div>
                 </Collapse>
             </header>

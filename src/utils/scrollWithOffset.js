@@ -1,5 +1,13 @@
+import gsap from 'gsap'
+import ScrollToPlugin from "gsap/ScrollToPlugin";
+
+gsap.registerPlugin(ScrollToPlugin)
 export default (el) => {
-    const yCoordinate = el.getBoundingClientRect().top + window.scrollY;
-    const yOffset = -100;
-    window.scrollTo({ top: yCoordinate + yOffset, behavior: 'smooth' });
+    gsap.to(window, {
+        duration: .5,
+        scrollTo: {
+            y: el,
+            offsetY: 150
+        }
+    })
 }
