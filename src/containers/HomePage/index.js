@@ -156,6 +156,7 @@ class HomePage extends React.Component {
             mintDone: false
         }, async () => {
             try {
+                console.log('payload: ', address, values.amount)
                 let res = await this.contract.mint(address, values.amount)
                 console.log('res: ', res.hash)
                 if (res.hash !== null) {
