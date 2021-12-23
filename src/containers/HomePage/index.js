@@ -73,6 +73,11 @@ class HomePage extends React.Component {
 
         this.confettiTrigger = null
         this.animationInstance = null
+        this.openMintModal = this.openMintModal.bind(this)
+        this.closeMintModal = this.closeMintModal.bind(this)
+        this.toggleFAQ = this.toggleFAQ.bind(this)
+        this.validateAmount = this.validateAmount.bind(this)
+
         this.validationSchema = yup.object().shape({
             amount: yup
                 .number()
@@ -85,15 +90,12 @@ class HomePage extends React.Component {
                     test: this.validateAmount
                 })
         })
-
-        this.openMintModal = this.openMintModal.bind(this)
-        this.closeMintModal = this.closeMintModal.bind(this)
-        this.toggleFAQ = this.toggleFAQ.bind(this)
     }
 
-    async validateAmount(amount) {
-        await sleep(1000)
-        return amount > 999
+    validateAmount(amount) {
+        const { availableAmount } = this.state
+        console.log('av: ', availableAmount, typeof amount, amount)
+        return amount <= availableAmount
     }
 
     openMintModal() {
