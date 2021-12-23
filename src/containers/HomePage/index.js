@@ -271,10 +271,7 @@ class HomePage extends React.Component {
                 startWatch: true
             })
             await this.readContractInfo()
-        } else {
-            onBoard.startOnboarding()
         }
-
     }
 
     readContractInfo = async () => {
@@ -436,7 +433,7 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Button size={"lg"} onClick={this.handleOpen}>
+                        <Button size={"lg"} onClick={() => window.ethereum ? this.handleOpen() : onBoard.startOnboarding()}>
                             <FontAwesomeIcon icon={['fas', 'coins']}/>
                             MiNT NOW!!!
                         </Button>
