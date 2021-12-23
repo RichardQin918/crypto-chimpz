@@ -705,30 +705,30 @@ class HomePage extends React.Component {
                                             </Typography>
                                         </div>
                                     </div> :
-                                        soldOut ?
-                                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                            <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                                <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                                    {'All Crypto Chimpz NFT has been minted !'}
-                                                </Typography>
-                                            </div>
-                                        </div> :
-                                            paused ?
-                                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                                <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                                    <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                                        {'Minting temporarily paused, please wait for further information'}
-                                                    </Typography>
-                                                </div>
-                                            </div> :
-                                                !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) ?
-                                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                                    <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
-                                                        <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-                                                            {'Your address is not registered for pre-sale. Public sale will start soon !'}
-                                                        </Typography>
-                                                    </div>
-                                                </div> :
+                                        // soldOut ?
+                                        // <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                        //     <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                        //         <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                        //             {'All Crypto Chimpz NFT has been minted !'}
+                                        //         </Typography>
+                                        //     </div>
+                                        // </div> :
+                                        //     paused ?
+                                        //     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                        //         <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                        //             <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                        //                 {'Minting temporarily paused, please wait for further information'}
+                                        //             </Typography>
+                                        //         </div>
+                                        //     </div> :
+                                        //         !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) ?
+                                        //         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                        //             <div style={{ marginBottom: 40, width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
+                                        //                 <Typography style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                                        //                     {'Your address is not registered for pre-sale. Public sale will start soon !'}
+                                        //                 </Typography>
+                                        //             </div>
+                                        //         </div> :
                                                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                                                         <div style={{ width: '75%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start'}}>
                                                             <Typography style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>
