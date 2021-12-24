@@ -75,7 +75,9 @@ class HomePage extends React.Component {
             explorerHash: '',
 
             addressMintedPresaleBalance: 0,
-            addressMintedBalance: 0
+            addressMintedBalance: 0,
+            showErrMsg: false,
+            errMsg: ''
         }
 
         this.confettiTrigger = null
@@ -152,33 +154,48 @@ class HomePage extends React.Component {
     }
 
     handleMint = async (values) => {
-        const {address} = this.state
-        this.setState({
-            mintDone: false
-        }, async () => {
-            try {
-                console.log('payload: ', address, values.amount)
-                let res = await this.contract.mint(address, values.amount)
-                console.log('res: ', res.hash)
-                if (res.hash !== null) {
-                    this.setState({
-                        explorerHash: res.hash
-                    }, async () => {
-                        let receipt = await res.wait()
-                        console.log('receipt: ', receipt)
-                        if (receipt !== null && receipt !== undefined) {
-                            this.setState({
-                                msgModalVisible: true,
-                                mintModalVisible: false
-                            })
-                        }
-                    })
-
-                }
-            } catch (err) {
-                console.log('mint call failed: ', err)
+        const {address, cost, presaleCost} = this.state
+        fetch(`https://crypto-chimpz.uc.r.appspot.com/getProof?address=${address}`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            console.log('res: ', result)
+            if (result.message === 'address not whitelisted') {
+                this.setState({
+                    showErrMsg: true,
+                    errMsg: `${address} is not whitelisted for presale`
+                })
             }
+        }).catch(err => {
+            console.log('fetch failed: ', err)
         })
+
+        // this.setState({
+        //     mintDone: false
+        // }, async () => {
+        //     try {
+        //         console.log('payload: ', address, values.amount)
+        //         let res = await this.contract.mint(address, values.amount)
+        //         console.log('res: ', res.hash)
+        //         if (res.hash !== null) {
+        //             this.setState({
+        //                 explorerHash: res.hash
+        //             }, async () => {
+        //                 let receipt = await res.wait()
+        //                 console.log('receipt: ', receipt)
+        //                 if (receipt !== null && receipt !== undefined) {
+        //                     this.setState({
+        //                         msgModalVisible: true,
+        //                         mintModalVisible: false
+        //                     })
+        //                 }
+        //             })
+        //
+        //         }
+        //     } catch (err) {
+        //         console.log('mint call failed: ', err)
+        //     }
+        // })
     }
 
     handleNewChain = (chainId) => {
@@ -276,8 +293,6 @@ class HomePage extends React.Component {
 
             let availablePresaleAmount = await this.contract.availablePresaleAmount()
 
-            let isWhitelisted = await this.contract.isWhitelisted(address)
-
             let owner = await this.contract.owner()
 
             let addressMintedBalance = await this.contract.addressMintedBalance(address)
@@ -297,7 +312,7 @@ class HomePage extends React.Component {
                 addressMintedPresaleBalance: ethers.BigNumber.from(addressMintedPresaleBalance).toNumber(),
                 addressMintedBalance: ethers.BigNumber.from(addressMintedBalance).toNumber(),
                 paused,
-                isWhitelisted,
+                isWhitelisted: false,
                 onlyWhitelisted, owner,
                 soldOut: ethers.BigNumber.from(availableAmount).toNumber() === 0,
                 loading: false
@@ -827,6 +842,10 @@ class HomePage extends React.Component {
                                                                     <FontAwesomeIcon icon={'spinner-third'} spin/>}
                                                                 MiNT
                                                             </Button>
+                                                            {
+                                                                this.state.showErrMsg ?
+                                                                    <p>{this.state.errMsg}</p> : null
+                                                            }
                                                         </div>
                                                     </Form>
                                                 )
