@@ -38,8 +38,6 @@
     "gsap": "^3.9.0",
     "history": "^4.10.1",
     "immer": "^9.0.7",
-    "keccak256": "^1.0.6",
-    "merkletreejs": "^0.2.27",
     "node-sass": "^7.0.0",
     "prop-types": "^15.7.2",
     "react": "^17.0.2",

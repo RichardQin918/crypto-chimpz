@@ -86,6 +86,7 @@ class HomePage extends React.Component {
     }
 
     openMintModal() {
+        const { address } = this.state
         this.setState({mintModalVisible: true})
     }
 
@@ -267,6 +268,7 @@ class HomePage extends React.Component {
             let paused = await this.contract.paused()
 
             let cost = await this.contract.cost()
+            console.log('cost: ', cost)
 
             let presaleCost = await this.contract.presaleCost()
 
