@@ -8,6 +8,7 @@ import Image from 'components/Image'
 import Modal from 'components/Modal'
 import {Formik} from "formik";
 import * as yup from 'yup'
+import Countdown from 'components/Countdown'
 
 import {gsap} from "gsap";
 import {ScrollTrigger} from "gsap/ScrollTrigger";
@@ -521,13 +522,21 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Button size={"lg"}
-                                onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
-                                disabled={!mintDone}
+                        <Countdown
+                            // date={new Date('2021-12-25T14:46:25-05:00')}
+                            date={new Date('2021-12-27T00:00:00-05:00')}
+                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
+                                Pre-sale Starts In
+                            </h2>}
                         >
-                            <FontAwesomeIcon icon={['fas', 'coins']}/>
-                            MiNT NOW!!!
-                        </Button>
+                            <Button size={"lg"}
+                                    onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
+                                    disabled={!mintDone}
+                            >
+                                <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                MiNT NOW!!!
+                            </Button>
+                        </Countdown>
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>

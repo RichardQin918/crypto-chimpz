@@ -1,0 +1,21 @@
+.countdown {
+  display: flex;
+  flex-wrap: nowrap;
+  column-gap: 1.5em;
+  justify-content: center;
+  text-align: center;
+}
+
+.prepend {
+
+}
+
+.count {
+  font-family: 'Press Start 2P', sans-serif;
+  font-size: 2em;
+}
+
+label {
+  font-family: 'Space Mono', sans-serif;
+}
+
