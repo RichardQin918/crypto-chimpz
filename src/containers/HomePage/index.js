@@ -523,13 +523,13 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        {/*<Countdown*/}
-                        {/*    // date={new Date('2021-12-25T14:46:25-05:00')}*/}
-                        {/*    date={new Date('2021-12-27T00:00:00-05:00')}*/}
-                        {/*    prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>*/}
-                        {/*        Pre-sale Starts In*/}
-                        {/*    </h2>}*/}
-                        {/*>*/}
+                        <Countdown
+                            // date={new Date('2021-12-25T14:46:25-05:00')}
+                            date={new Date('2021-12-27T00:00:00-05:00')}
+                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
+                                Pre-sale Starts In
+                            </h2>}
+                        >
                             <Button size={"lg"}
                                     onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
                                     disabled={!mintDone}
@@ -537,7 +537,7 @@ class HomePage extends React.Component {
                                 <FontAwesomeIcon icon={['fas', 'coins']}/>
                                 MiNT NOW!!!
                             </Button>
-                        {/*</Countdown>*/}
+                        </Countdown>
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>
