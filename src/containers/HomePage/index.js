@@ -475,6 +475,7 @@ class HomePage extends React.Component {
             presaleCost,
             paused,
             nftPerAddressLimit,
+            nftPerAddressPresaleLimit,
             isWhitelisted,
             onlyWhitelisted,
             address,
@@ -522,13 +523,13 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Countdown
-                            // date={new Date('2021-12-25T14:46:25-05:00')}
-                            date={new Date('2021-12-27T00:00:00-05:00')}
-                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
-                                Pre-sale Starts In
-                            </h2>}
-                        >
+                        {/*<Countdown*/}
+                        {/*    // date={new Date('2021-12-25T14:46:25-05:00')}*/}
+                        {/*    date={new Date('2021-12-27T00:00:00-05:00')}*/}
+                        {/*    prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>*/}
+                        {/*        Pre-sale Starts In*/}
+                        {/*    </h2>}*/}
+                        {/*>*/}
                             <Button size={"lg"}
                                     onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
                                     disabled={!mintDone}
@@ -536,7 +537,7 @@ class HomePage extends React.Component {
                                 <FontAwesomeIcon icon={['fas', 'coins']}/>
                                 MiNT NOW!!!
                             </Button>
-                        </Countdown>
+                        {/*</Countdown>*/}
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>
@@ -862,7 +863,11 @@ class HomePage extends React.Component {
                                                         style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
                                                         {`${values.amount === '' ? '--' : onlyWhitelisted ? presaleCost * parseFloat(values.amount) : cost * parseFloat(values.amount)} ETH`}
                                                     </Typography>
-
+                                                    <p style={{ marginTop: 15, fontSize: 12, fontWeight: 'light', color: '#989898', fontStyle: 'italic' }}>
+                                                        Pre-sale Limit:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit}</span>
+                                                        Public Sale Limit: <span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>{nftPerAddressLimit}</span>
+                                                        Max per address:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit + nftPerAddressLimit}</span>
+                                                    </p>
                                                     <Form.Group controlId={'formAmount'} className={'col-12'}>
                                                         <Form.Label>Amount</Form.Label>
                                                         <InputGroup
