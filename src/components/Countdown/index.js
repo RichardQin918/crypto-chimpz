@@ -7,7 +7,6 @@ function Countdown(props) {
     const [countdown, setCountdown] = useState(() => calcCountdown())
 
     function calcCountdown() {
-        console.log('calcCountdown, completed: ', completed)
         let days, hours, minutes, seconds
         days = hours = minutes = seconds = '00'
 
@@ -44,9 +43,6 @@ function Countdown(props) {
                 }
             }, 1000)
         }
-
-        console.log(clock)
-
         return function() {
             clock && clearInterval(clock)
         }
