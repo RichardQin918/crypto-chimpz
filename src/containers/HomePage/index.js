@@ -163,7 +163,7 @@ class HomePage extends React.Component {
         const {address, cost, presaleCost, onlyWhitelisted} = this.state
         console.log('address: ', address)
         if (onlyWhitelisted) {
-            fetch(`https://crypto-chimpz.uc.r.appspot.com/getProof?address=${address.toLowerCase()}`, {
+            fetch(`https://crzmerkle.com/getProof?address=${address.toLowerCase()}`, {
                 method: 'GET',
             }).then(async res => {
                 let result = await res.json()
@@ -380,8 +380,8 @@ class HomePage extends React.Component {
                             message: `Current address available minting limit: ${onlyWhitelisted ? nftPerAddressPresaleLimit - addressMintedPresaleBalance : nftPerAddressLimit - addressMintedBalance} `
                            + '\n' + `Available NFT for current stage: ${onlyWhitelisted ? availablePresaleAmount : availableAmount}`,
                             test: (amount) => {
-                                let test1 =  this.sameAddress(owner, address) || (onlyWhitelisted && amount <= availablePresaleAmount) || (!onlyWhitelisted && amount <= availableAmount)
-                                let test2 = this.sameAddress(owner, address) || (!this.sameAddress(owner, address) && ((onlyWhitelisted && amount + addressMintedPresaleBalance <= nftPerAddressPresaleLimit) || (!onlyWhitelisted && amount + addressMintedBalance <= nftPerAddressLimit)))
+                                let test1 = this.sameAddress(owner, address) || (onlyWhitelisted && amount <= availablePresaleAmount) || (!onlyWhitelisted && amount <= availableAmount)
+                                let test2 = this.sameAddress(owner, address) || (!this.sameAddress(owner, address) && ((onlyWhitelisted && amount + addressMintedPresaleBalance <= nftPerAddressPresaleLimit) || (!onlyWhitelisted && amount + addressMintedBalance <= Math.min(nftPerAddressLimit, maxMintAmount))))
                                 let test3 = amount <= maxMintAmount
                                 return test1 && test2 && test3
                             }
@@ -523,13 +523,13 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Countdown
-                            // date={new Date('2021-12-25T14:46:25-05:00')}
-                            date={new Date('2021-12-27T00:00:00-05:00')}
-                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
-                                Pre-sale Starts In
-                            </h2>}
-                        >
+                        {/*<Countdown*/}
+                        {/*    // date={new Date('2021-12-25T14:46:25-05:00')}*/}
+                        {/*    date={new Date('2021-12-27T00:00:00-05:00')}*/}
+                        {/*    prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>*/}
+                        {/*        Pre-sale Starts In*/}
+                        {/*    </h2>}*/}
+                        {/*>*/}
                             <Button size={"lg"}
                                     onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
                                     disabled={!mintDone}
@@ -537,7 +537,7 @@ class HomePage extends React.Component {
                                 <FontAwesomeIcon icon={['fas', 'coins']}/>
                                 MiNT NOW!!!
                             </Button>
-                        </Countdown>
+                        {/*</Countdown>*/}
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>
