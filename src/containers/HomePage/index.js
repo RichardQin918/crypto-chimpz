@@ -167,7 +167,7 @@ class HomePage extends React.Component {
                 method: 'GET',
             }).then(async res => {
                 let result = await res.json()
-                console.log('get proof res: ', result)
+                console.log('get proof result: ', address, result)
                 if (result.message === 'address not whitelisted') {
                     this.setState({
                         showErrMsg: true,
@@ -199,10 +199,20 @@ class HomePage extends React.Component {
                                         })
                                     }
                                 })
-
                             }
                         } catch (err) {
-                            console.log('presale  call failed: ', err)
+                            console.log('presale call failed: ', err.reason)
+                            if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                this.setState({
+                                    showErrMsg: true,
+                                    errMsg: 'Not enough funds in your wallet'
+                                })
+                            } else {
+                                this.setState({
+                                    showErrMsg: true,
+                                    errMsg: err.reason
+                                })
+                            }
                         }
                         this.setState({
                             mintDone: true
@@ -239,7 +249,18 @@ class HomePage extends React.Component {
 
                     }
                 } catch (err) {
-                    console.log('mint call failed: ', err)
+                    console.log('mint call failed: ', err.reason)
+                    if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                        this.setState({
+                            showErrMsg: true,
+                            errMsg: 'Not enough funds in your wallet'
+                        })
+                    } else {
+                        this.setState({
+                            showErrMsg: true,
+                            errMsg: err.reason
+                        })
+                    }
                 }
                 this.setState({
                     mintDone: true
@@ -891,7 +912,6 @@ class HomePage extends React.Component {
                                                                 onChange={handleChange}
                                                                 onBlur={handleBlur}
                                                                 disabled={!mintDone}
-
                                                             />
                                                             <Button variant={'outline-secondary'} onClick={() => {
                                                                     setFieldValue('amount', ++values.amount)
@@ -918,7 +938,7 @@ class HomePage extends React.Component {
                                                         </Button>
                                                         {
                                                             this.state.showErrMsg ?
-                                                                <p>{this.state.errMsg}</p> : null
+                                                                <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.errMsg}</p> : null
                                                         }
                                                     </div>
                                                 </Form>
