@@ -180,11 +180,22 @@ class HomePage extends React.Component {
                     }, async () => {
                         console.log('started')
                         try {
+                            let gasPrice = await this.provider.getGasPrice()
                             let overrides = {
-                                value: ethers.utils.parseEther((presaleCost * values.amount).toString())
+                                value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                                gasPrice: gasPrice
                             }
-                            console.log('presale payload: ', values.amount, result.proof, overrides)
-                            let res = await this.contract.earlyAccessSale(values.amount, result.proof, overrides)
+                            let gasLimit = await this.contract.estimateGas.earlyAccessSale(values.amount, result.proof, overrides)
+
+
+                            let options = {
+                                value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                                gasLimit: gasLimit,
+                                gasPrice: gasPrice
+                            }
+
+                            console.log('presale payload: ', values.amount, result.proof, options)
+                            let res = await this.contract.earlyAccessSale(values.amount, result.proof, options)
                             console.log('presale hash: ', res.hash)
                             if (res.hash !== null) {
                                 this.setState({
@@ -201,7 +212,7 @@ class HomePage extends React.Component {
                                 })
                             }
                         } catch (err) {
-                            console.log('presale call failed: ', err.reason)
+                            console.log('presale call failed: ', err)
                             if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
                                 this.setState({
                                     showErrMsg: true,
@@ -210,7 +221,7 @@ class HomePage extends React.Component {
                             } else {
                                 this.setState({
                                     showErrMsg: true,
-                                    errMsg: err.reason
+                                    errMsg: err.reason === undefined ? err.message : err.reason
                                 })
                             }
                         }
@@ -227,11 +238,22 @@ class HomePage extends React.Component {
                 mintDone: false
             }, async () => {
                 try {
+                    let gasPrice = await this.provider.getGasPrice()
                     let overrides = {
-                        value: ethers.utils.parseEther((cost * values.amount).toString())
+                        value: ethers.utils.parseEther((cost * values.amount).toString()),
+                        gasPrice: gasPrice
                     }
-                    console.log('mint payload: ', address, values.amount, overrides)
-                    let res = await this.contract.mint(address, values.amount, overrides)
+                    let gasLimit = await this.contract.estimateGas.mint(address, values.amount, overrides)
+
+
+                    let options = {
+                        value: ethers.utils.parseEther((cost * values.amount).toString()),
+                        gasLimit: gasLimit,
+                        gasPrice: gasPrice
+                    }
+
+                    console.log('mint payload: ', address, values.amount, options)
+                    let res = await this.contract.mint(address, values.amount, options)
                     console.log('mint res: ', res.hash)
                     if (res.hash !== null) {
                         this.setState({
@@ -249,7 +271,7 @@ class HomePage extends React.Component {
 
                     }
                 } catch (err) {
-                    console.log('mint call failed: ', err.reason)
+                    console.log('mint call failed: ', err)
                     if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
                         this.setState({
                             showErrMsg: true,
@@ -258,7 +280,7 @@ class HomePage extends React.Component {
                     } else {
                         this.setState({
                             showErrMsg: true,
-                            errMsg: err.reason
+                            errMsg: err.reason === undefined ? err.message : err.reason
                         })
                     }
                 }
