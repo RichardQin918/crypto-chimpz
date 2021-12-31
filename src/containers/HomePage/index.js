@@ -180,18 +180,18 @@ class HomePage extends React.Component {
                     }, async () => {
                         console.log('started')
                         try {
-                            let gasPrice = await this.provider.getGasPrice()
-                            let overrides = {
-                                value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
-                                gasPrice: gasPrice
-                            }
-                            let gasLimit = await this.contract.estimateGas.earlyAccessSale(values.amount, result.proof, overrides)
+                            // let gasPrice = await this.provider.getGasPrice()
+                            // let overrides = {
+                            //     value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                            //     gasPrice: gasPrice
+                            // }
+                            // let gasLimit = await this.contract.estimateGas.earlyAccessSale(values.amount, result.proof, overrides)
 
 
                             let options = {
                                 value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
-                                gasLimit: gasLimit,
-                                gasPrice: gasPrice
+                                // gasLimit: gasLimit,
+                                // gasPrice: gasPrice
                             }
 
                             console.log('presale payload: ', values.amount, result.proof, options)
@@ -206,28 +206,43 @@ class HomePage extends React.Component {
                                     if (receipt !== null && receipt !== undefined) {
                                         this.setState({
                                             msgModalVisible: true,
-                                            mintModalVisible: false
+                                            mintModalVisible: false,
+                                            mintDone: true
                                         })
                                     }
                                 })
                             }
                         } catch (err) {
                             console.log('presale call failed: ', err)
-                            if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
-                                this.setState({
-                                    showErrMsg: true,
-                                    errMsg: 'Not enough funds in your wallet'
-                                })
-                            } else {
-                                this.setState({
-                                    showErrMsg: true,
-                                    errMsg: err.reason === undefined ? err.message : err.reason
-                                })
-                            }
+                            this.setState({
+                                mintDone: true
+                            }, () => {
+                                if (err.reason !== undefined) {
+                                    if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: 'Not enough funds in your wallet'
+                                        })
+                                    } else {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: err.reason
+                                        })
+                                    }
+                                } else {
+                                    this.setState({
+                                        showErrMsg: true,
+                                        errMsg: err.message
+                                    })
+                                }
+                            })
+
+
                         }
                         this.setState({
                             mintDone: true
                         })
+
                     })
                 }
             }).catch(err => {
@@ -238,18 +253,18 @@ class HomePage extends React.Component {
                 mintDone: false
             }, async () => {
                 try {
-                    let gasPrice = await this.provider.getGasPrice()
-                    let overrides = {
-                        value: ethers.utils.parseEther((cost * values.amount).toString()),
-                        gasPrice: gasPrice
-                    }
-                    let gasLimit = await this.contract.estimateGas.mint(address, values.amount, overrides)
+                    // let gasPrice = await this.provider.getGasPrice()
+                    // let overrides = {
+                    //     value: ethers.utils.parseEther((cost * values.amount).toString()),
+                    //     gasPrice: gasPrice
+                    // }
+                    // let gasLimit = await this.contract.estimateGas.mint(address, values.amount, overrides)
 
 
                     let options = {
                         value: ethers.utils.parseEther((cost * values.amount).toString()),
-                        gasLimit: gasLimit,
-                        gasPrice: gasPrice
+                        // gasLimit: gasLimit,
+                        // gasPrice: gasPrice
                     }
 
                     console.log('mint payload: ', address, values.amount, options)
@@ -264,7 +279,8 @@ class HomePage extends React.Component {
                             if (receipt !== null && receipt !== undefined) {
                                 this.setState({
                                     msgModalVisible: true,
-                                    mintModalVisible: false
+                                    mintModalVisible: false,
+                                    mintDone: true
                                 })
                             }
                         })
@@ -272,21 +288,30 @@ class HomePage extends React.Component {
                     }
                 } catch (err) {
                     console.log('mint call failed: ', err)
-                    if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
-                        this.setState({
-                            showErrMsg: true,
-                            errMsg: 'Not enough funds in your wallet'
-                        })
-                    } else {
-                        this.setState({
-                            showErrMsg: true,
-                            errMsg: err.reason === undefined ? err.message : err.reason
-                        })
-                    }
+                    this.setState({
+                        mintDone: true
+                    }, () => {
+                        if (err.reason !== undefined) {
+                            if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                this.setState({
+                                    showErrMsg: true,
+                                    errMsg: 'Not enough funds in your wallet'
+                                })
+                            } else {
+                                this.setState({
+                                    showErrMsg: true,
+                                    errMsg: err.reason
+                                })
+                            }
+                        } else {
+                            this.setState({
+                                showErrMsg: true,
+                                errMsg: err.message
+                            })
+                        }
+                    })
+
                 }
-                this.setState({
-                    mintDone: true
-                })
             })
         }
     }
@@ -906,11 +931,11 @@ class HomePage extends React.Component {
                                                         style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
                                                         {`${values.amount === '' ? '--' : onlyWhitelisted ? presaleCost * parseFloat(values.amount) : cost * parseFloat(values.amount)} ETH`}
                                                     </Typography>
-                                                    <p style={{ marginTop: 15, fontSize: 12, fontWeight: 'light', color: '#989898', fontStyle: 'italic' }}>
-                                                        Pre-sale Limit:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit}</span>
-                                                        Public Sale Limit: <span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>{nftPerAddressLimit}</span>
-                                                        Max per address:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit + nftPerAddressLimit}</span>
-                                                    </p>
+                                                    {/*<p style={{ marginTop: 15, fontSize: 12, fontWeight: 'light', color: '#989898', fontStyle: 'italic' }}>*/}
+                                                    {/*    Pre-sale Limit:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit}</span>*/}
+                                                    {/*    Public Sale Limit: <span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>{nftPerAddressLimit}</span>*/}
+                                                    {/*    Max per address:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit + nftPerAddressLimit}</span>*/}
+                                                    {/*</p>*/}
                                                     <Form.Group controlId={'formAmount'} className={'col-12'}>
                                                         <Form.Label>Amount</Form.Label>
                                                         <InputGroup
