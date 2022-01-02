@@ -2,11 +2,16 @@
 
 $font-family-sans-serif: 'Roboto', sans-serif;
 $input-btn-font-family: 'Roboto', sans-serif;
+$form-label-font-weight: 600;
+$input-bg: $black-90;
+$input-color: $white;
+$red: $red;
 
 @import "../../node_modules/bootstrap/scss/variables";
 @import "../../node_modules/bootstrap/scss/mixins";
 @import "../../node_modules/bootstrap/scss/root";
 
+$input-border-color: $secondary;
 $custom-colors: (
         "twitter": #1da1f2,
         "discord": #7289da,

@@ -1,6 +1,6 @@
 import React from "react";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {Button, Form} from 'react-bootstrap';
+import {Button, Form, InputGroup} from 'react-bootstrap';
 import Carousel from './Carousel'
 import TeamMember from "components/TeamMember";
 import FAQ from "components/FAQ";
@@ -8,6 +8,7 @@ import Image from 'components/Image'
 import Modal from 'components/Modal'
 import {Formik} from "formik";
 import * as yup from 'yup'
+import Countdown from 'components/Countdown'
 
 import {gsap} from "gsap";
 import {ScrollTrigger} from "gsap/ScrollTrigger";
@@ -20,6 +21,19 @@ import TeamMemberData from 'data/team'
 import FAQData from 'data/faq'
 import ReactCanvasConfetti from "react-canvas-confetti";
 import ClassNames from "classnames";
+
+import {Typography} from '@material-ui/core'
+
+import {ethers} from "ethers";
+import Contract from '../../config/Contract.json'
+
+import MetaMaskOnboarding from "@metamask/onboarding";
+
+const currentUrl = new URL(window.location.href)
+const forwarderOrigin = currentUrl.hostname === 'localhost'
+    ? 'http://localhost:9010'
+    : undefined
+export const onBoard = new MetaMaskOnboarding({forwarderOrigin})
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -36,38 +50,56 @@ class HomePage extends React.Component {
         this.state = {
             activeQuestion: '',
             mintModalVisible: false,
+            mintAmount: 0,
+            address: '',
+            networkId: 0,
+            chainId: 0,
+            startWatch: false,
+
+            availableAmount: 0,
+            availablePresaleAmount: 0,
+            maxSupply: 0,
+            maxPresaleSupply: 0,
+            maxMintAmount: 0,
+            nftPerAddressLimit: 0,
+            nftPerAddressPresaleLimit: 0,
+            paused: false,
+            onlyWhitelisted: false,
+            isWhitelisted: false,
+            cost: 0,
+            presaleCost: 0,
+            loading: true,
+            owner: '',
+            soldOut: false,
+
+            msgModalVisible: false,
+            explorerHash: '',
+
+            addressMintedPresaleBalance: 0,
+            addressMintedBalance: 0,
+            showErrMsg: false,
+            errMsg: '',
+            mintDone: true
         }
 
         this.confettiTrigger = null
         this.animationInstance = null
-        this.validationSchema = yup.object().shape({
-            amount: yup
-                .number()
-                .required('Amount is required')
-                .positive('Please enter a positive amount')
-                .test({
-                    name: 'checkSufficientAmount',
-                    message: 'Replace validator here, try amount > 999',
-                    test: this.validateAmount
-                })
-        })
-
         this.openMintModal = this.openMintModal.bind(this)
         this.closeMintModal = this.closeMintModal.bind(this)
         this.toggleFAQ = this.toggleFAQ.bind(this)
     }
 
-    async validateAmount(amount) {
-        await sleep(1000)
-        return amount > 999
-    }
-
-    openMintModal() {
+    async openMintModal() {
+        await this.readContractInfo()
         this.setState({mintModalVisible: true})
     }
 
     closeMintModal() {
-        this.setState({mintModalVisible: false})
+        this.setState({
+            mintModalVisible: false,
+            errMsg: '',
+            showErrMsg: false
+        })
     }
 
     toggleFAQ(question) {
@@ -116,7 +148,326 @@ class HomePage extends React.Component {
         this.animationInstance = instance;
     };
 
-    componentDidMount() {
+    closeMsgModal = () => {
+        this.setState({
+            msgModalVisible: false
+        })
+    }
+
+    goToEtherscan = () => {
+        const {explorerHash} = this.state
+        window.open(`https://etherscan.io/tx/${explorerHash}`, "_blank")
+    }
+
+    handleMint = async (values) => {
+        const {address, cost, presaleCost, onlyWhitelisted} = this.state
+        console.log('address: ', address)
+        if (onlyWhitelisted) {
+            fetch(`https://crzmerkle.com/getProof?address=${address.toLowerCase()}`, {
+                method: 'GET',
+            }).then(async res => {
+                let result = await res.json()
+                console.log('get proof result: ', address, result)
+                if (result.message === 'address not whitelisted') {
+                    this.setState({
+                        showErrMsg: true,
+                        errMsg: `${address} is not whitelisted for presale`
+                    })
+                } else {
+                    // calling pre-sale
+                    this.setState({
+                        mintDone: false
+                    }, async () => {
+                        console.log('started')
+                        try {
+                            // let gasPrice = await this.provider.getGasPrice()
+                            // let overrides = {
+                            //     value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                            //     gasPrice: gasPrice
+                            // }
+                            // let gasLimit = await this.contract.estimateGas.earlyAccessSale(values.amount, result.proof, overrides)
+
+
+                            let options = {
+                                value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                                // gasLimit: gasLimit,
+                                // gasPrice: gasPrice
+                            }
+
+                            console.log('presale payload: ', values.amount, result.proof, options)
+                            let res = await this.contract.earlyAccessSale(values.amount, result.proof, options)
+                            console.log('presale hash: ', res.hash)
+                            if (res.hash !== null) {
+                                this.setState({
+                                    explorerHash: res.hash
+                                }, async () => {
+                                    let receipt = await res.wait()
+                                    console.log('presale receipt: ', receipt)
+                                    if (receipt !== null && receipt !== undefined) {
+                                        this.setState({
+                                            msgModalVisible: true,
+                                            mintModalVisible: false,
+                                            mintDone: true
+                                        })
+                                    }
+                                })
+                            }
+                        } catch (err) {
+                            console.log('presale call failed: ', err)
+                            this.setState({
+                                mintDone: true
+                            }, () => {
+                                if (err.reason !== undefined) {
+                                    if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: 'Not enough funds in your wallet'
+                                        })
+                                    } else {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: err.reason
+                                        })
+                                    }
+                                } else {
+                                    this.setState({
+                                        showErrMsg: true,
+                                        errMsg: err.message
+                                    })
+                                }
+                            })
+
+
+                        }
+                        this.setState({
+                            mintDone: true
+                        })
+
+                    })
+                }
+            }).catch(err => {
+                console.log('fetch failed: ', err)
+            })
+        } else {
+            this.setState({
+                mintDone: false
+            }, async () => {
+                try {
+                    // let gasPrice = await this.provider.getGasPrice()
+                    // let overrides = {
+                    //     value: ethers.utils.parseEther((cost * values.amount).toString()),
+                    //     gasPrice: gasPrice
+                    // }
+                    // let gasLimit = await this.contract.estimateGas.mint(address, values.amount, overrides)
+
+
+                    let options = {
+                        value: ethers.utils.parseEther((cost * values.amount).toString()),
+                        // gasLimit: gasLimit,
+                        // gasPrice: gasPrice
+                    }
+
+                    console.log('mint payload: ', address, values.amount, options)
+                    let res = await this.contract.mint(address, values.amount, options)
+                    console.log('mint res: ', res.hash)
+                    if (res.hash !== null) {
+                        this.setState({
+                            explorerHash: res.hash
+                        }, async () => {
+                            let receipt = await res.wait()
+                            console.log('mint receipt: ', receipt)
+                            if (receipt !== null && receipt !== undefined) {
+                                this.setState({
+                                    msgModalVisible: true,
+                                    mintModalVisible: false,
+                                    mintDone: true
+                                })
+                            }
+                        })
+
+                    }
+                } catch (err) {
+                    console.log('mint call failed: ', err)
+                    this.setState({
+                        mintDone: true
+                    }, () => {
+                        if (err.reason !== undefined) {
+                            if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                this.setState({
+                                    showErrMsg: true,
+                                    errMsg: 'Not enough funds in your wallet'
+                                })
+                            } else {
+                                this.setState({
+                                    showErrMsg: true,
+                                    errMsg: err.reason
+                                })
+                            }
+                        } else {
+                            this.setState({
+                                showErrMsg: true,
+                                errMsg: err.message
+                            })
+                        }
+                    })
+
+                }
+            })
+        }
+    }
+
+    handleNewChain = (chainId) => {
+        this.setState({
+            chainId: chainId
+        })
+    }
+
+    handleNewNetwork = (networkId) => {
+        this.setState({
+            networkId: Number(networkId)
+        })
+    }
+
+    handleNewAccounts = (addr) => {
+        let address = addr === undefined || addr.length < 1 ? '' : addr[0]
+        this.setState({
+            address: address
+        })
+    }
+
+    updateAccounts = async (addr) => {
+        this.setState({
+            loading: true
+        }, async () => {
+            this.handleNewAccounts(addr)
+            await this.readContractInfo()
+        })
+
+    }
+
+    initWeb3 = async () => {
+        if (window.ethereum) {
+            try {
+                await window.ethereum.enable();
+            } catch (err) {
+                console.error('Error on init when getting accounts', err)
+            }
+            try {
+                const newAccounts = await window.ethereum.request({
+                    method: 'eth_accounts',
+                })
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId',
+                })
+
+                const networkId = await window.ethereum.request({
+                    method: 'net_version',
+                })
+                this.handleNewChain(chainId)
+                this.handleNewNetwork(networkId)
+                this.handleNewAccounts(newAccounts)
+            } catch (err) {
+                console.log('check network failed: ', err)
+            }
+            window.ethereum.autoRefreshOnNetworkChange = false
+            window.ethereum.on('chainChanged', this.handleNewChain)
+            window.ethereum.on('networkChanged', this.handleNewNetwork)
+            window.ethereum.on('accountsChanged', this.updateAccounts)
+
+            this.provider = ethers.getDefaultProvider(this.state.networkId)
+            // this.contract = new ethers.Contract(Contract.address, Contract.abi, this.provider)
+            this.signer = (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
+            this.contract = new ethers.Contract(Contract.address, Contract.abi, this.signer)
+            this.setState({
+                startWatch: true
+            }, async () => {
+                await this.readContractInfo()
+            })
+        }
+    }
+
+    readContractInfo = async () => {
+        const { address } = this.state
+        try {
+            let maxSupply = await this.contract.maxSupply()
+
+            let maxPresaleSupply = await this.contract.maxPresaleSupply()
+
+            let maxMintAmount = await this.contract.maxMintAmount()
+
+            let nftPerAddressLimit = await this.contract.nftPerAddressLimit()
+
+            let nftPerAddressPresaleLimit = await this.contract.nftPerAddressPresaleLimit()
+
+            let onlyWhitelisted = await this.contract.onlyWhitelisted()
+
+            let paused = await this.contract.paused()
+
+            let cost = await this.contract.cost()
+
+            let presaleCost = await this.contract.presaleCost()
+
+            let availableAmount = await this.contract.availableAmount()
+
+            let availablePresaleAmount = await this.contract.availablePresaleAmount()
+
+            let owner = await this.contract.owner()
+
+            let addressMintedBalance = await this.contract.addressMintedBalance(address)
+
+            let addressMintedPresaleBalance = await this.contract.addressMintedPresaleBalance(address)
+
+            this.setState({
+                maxSupply: ethers.BigNumber.from(maxSupply).toNumber(),
+                maxPresaleSupply: ethers.BigNumber.from(maxPresaleSupply).toNumber(),
+                maxMintAmount: ethers.BigNumber.from(maxMintAmount).toNumber(),
+                nftPerAddressLimit: ethers.BigNumber.from(nftPerAddressLimit).toNumber(),
+                nftPerAddressPresaleLimit: ethers.BigNumber.from(nftPerAddressPresaleLimit).toNumber(),
+                cost: Number(ethers.utils.formatEther(cost)),
+                presaleCost: Number(ethers.utils.formatEther(presaleCost)),
+                availableAmount: ethers.BigNumber.from(availableAmount).toNumber(),
+                availablePresaleAmount: ethers.BigNumber.from(availablePresaleAmount).toNumber(),
+                addressMintedPresaleBalance: ethers.BigNumber.from(addressMintedPresaleBalance).toNumber(),
+                addressMintedBalance: ethers.BigNumber.from(addressMintedBalance).toNumber(),
+                paused,
+                isWhitelisted: false,
+                onlyWhitelisted, owner,
+                soldOut: ethers.BigNumber.from(availableAmount).toNumber() === 0,
+                loading: false
+            }, () => {
+                const { availableAmount, availablePresaleAmount, nftPerAddressLimit, nftPerAddressPresaleLimit, maxMintAmount, onlyWhitelisted, owner, addressMintedBalance, addressMintedPresaleBalance, address } = this.state
+                console.log('limit: ', onlyWhitelisted, nftPerAddressPresaleLimit, nftPerAddressLimit, addressMintedBalance, this.sameAddress(owner, address))
+                this.validationSchema = yup.object().shape({
+                    amount: yup
+                        .number()
+                        .required('Mint amount is required')
+                        .positive('Mint amount has to be positive')
+                        .integer('Mint amount has to be an integer')
+                        .test({
+                            name: 'checkSufficientAmount',
+                            message: `Current address available minting limit: ${onlyWhitelisted ? nftPerAddressPresaleLimit - addressMintedPresaleBalance : nftPerAddressLimit - addressMintedBalance} `
+                           + '\n' + `Available NFT for current stage: ${onlyWhitelisted ? availablePresaleAmount : availableAmount}`,
+                            test: (amount) => {
+                                let test1 = this.sameAddress(owner, address) || (onlyWhitelisted && amount <= availablePresaleAmount) || (!onlyWhitelisted && amount <= availableAmount)
+                                let test2 = this.sameAddress(owner, address) || (!this.sameAddress(owner, address) && ((onlyWhitelisted && amount + addressMintedPresaleBalance <= nftPerAddressPresaleLimit) || (!onlyWhitelisted && amount + addressMintedBalance <= Math.min(nftPerAddressLimit, maxMintAmount))))
+                                let test3 = amount <= maxMintAmount
+                                return test1 && test2 && test3
+                            }
+                        })
+                })
+            })
+        } catch (err) {
+            console.log('read contract info error: ', err)
+        }
+    }
+
+    sameAddress = (addr1, addr2) => {
+        return addr1.toLowerCase() === addr2.toLowerCase();
+
+    }
+
+
+    async componentDidMount() {
         // Hack to force scroll triggers to work properly, TODO: listen for image load event
         setTimeout(() => {
             document.querySelectorAll('#roadmap .line, #roadmap .circle').forEach(el => {
@@ -175,17 +526,33 @@ class HomePage extends React.Component {
                 ease: 'none',
             })
         }, 500)
+        await this.initWeb3()
     }
 
     componentWillUnmount() {
         this.confettiTrigger && this.confettiTrigger.kill()
     }
 
-    mint() {
-        console.log('Minting')
-    }
-
     render() {
+        const {
+            loading,
+            maxSupply,
+            maxMintAmount,
+            availableAmount,
+            cost,
+            presaleCost,
+            paused,
+            nftPerAddressLimit,
+            nftPerAddressPresaleLimit,
+            isWhitelisted,
+            onlyWhitelisted,
+            address,
+            owner,
+            soldOut,
+            amount,
+            mintDone
+        } = this.state
+
         const TeamMembers = TeamMemberData.map(member => (
             <TeamMember {...member} key={member.name} className={'col-12 col-sm-6 col-lg-3'}/>
         ))
@@ -224,10 +591,21 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Button size={"lg"} onClick={this.openMintModal}>
-                            <FontAwesomeIcon icon={['fas', 'coins']}/>
-                            MiNT NOW!!!
-                        </Button>
+                        <Countdown
+                            // date={new Date('2021-12-25T14:46:25-05:00')}
+                            date={new Date('2021-12-27T00:00:00-05:00')}
+                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
+                                Pre-sale Starts In
+                            </h2>}
+                        >
+                            <Button size={"lg"}
+                                    onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
+                                    disabled={!mintDone}
+                            >
+                                <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                MiNT NOW!!!
+                            </Button>
+                        </Countdown>
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>
@@ -473,56 +851,150 @@ class HomePage extends React.Component {
                         </div>
                     </div>
                 </div>
+
                 <Modal
-                    width="400px" title={'This is a title'}
+                    width="300px" showHeader={false}
+                    visible={this.state.msgModalVisible}
+                    onClose={this.closeMsgModal}
+                >
+                    <div className="status">
+                        <FontAwesomeIcon icon={'check-circle'}/>
+                        <div className="message">
+                            Mint Requested <br/><br/>
+                            <Button variant={'primary'} onClick={this.goToEtherscan}>
+                                Check On Etherscan
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+
+                <Modal
+                    width="400px" title={'Mint Information'}
                     visible={this.state.mintModalVisible}
                     onClose={this.closeMintModal}
+                    loading={loading} loadingText={'Loading Mint Information'}
                 >
-                    <Formik
-                        initialValues={{amount: ''}}
-                        validationSchema={this.validationSchema}
-                        onSubmit={(values, {setSubmitting, resetForm}) => {
-                            setSubmitting(true)
-                            setTimeout(() => {
-                                alert(JSON.stringify(values))
-                                resetForm()
-                                setSubmitting(false)
-                            }, 1000)
-                        }}
-                    >
-                        {({
-                              values,
-                              errors,
-                              touched,
-                              handleChange,
-                              handleBlur,
-                              handleSubmit,
-                              isSubmitting
-                          }) => (
-                            <Form onSubmit={handleSubmit} className={'row g-3'}>
-                                <Form.Group controlId={'formAmount'} className={'col-12'}>
-                                    <Form.Label>Amount</Form.Label>
-                                    <Form.Control
-                                        type={'number'} placeholder={'This is a placeholder'}
-                                        name={'amount'} value={values.amount}
-                                        className={ClassNames([touched.amount ? (errors.amount ? 'is-invalid' : 'is-valid') : ''])}
-                                        onChange={handleChange}
-                                        onBlur={handleBlur}
-                                    />
-                                    {touched.amount && errors.amount ? (
-                                        <div className="invalid-feedback">{errors.amount}</div>
-                                    ) : null}
-                                </Form.Group>
-                                <div className="col-12 text-end">
-                                    <Button className={'mint-btn'} variant={'primary'} type={'submit'}
-                                            disabled={isSubmitting}>
-                                        {isSubmitting && <FontAwesomeIcon icon={'spinner-third'} spin/>}
-                                        MiNT
-                                    </Button>
+                    {
+                        soldOut ?
+                            <div className="status">
+                                <FontAwesomeIcon icon={'empty-set'}/>
+                                <div className={'message'}>All Crypto Chimpz NFT has been minted!</div>
+                            </div>
+                            : paused ?
+                                <div className="status">
+                                    <FontAwesomeIcon icon={'pause-circle'}/>
+                                    <div className={'message'}>Minting temporarily paused, please wait for further
+                                        information
+                                    </div>
                                 </div>
-                            </Form>
-                        )}
-                    </Formik>
+                                // : !this.sameAddress(owner, address) && (this.state.onlyWhitelisted && !this.state.isWhitelisted) ?
+                                //     <div className="status">
+                                //         <FontAwesomeIcon icon={'hourglass-half'}/>
+                                //         <div className={'message'}>Your address is not registered for pre-sale. Public sale
+                                //             will start soon!
+                                //         </div>
+                                //     </div>
+                                :
+                                <>
+                                    <Formik
+                                        initialValues={{amount: ''}}
+                                        validationSchema={this.validationSchema}
+                                        onSubmit={async (values, {setSubmitting, resetForm}) => {
+                                            setSubmitting(true)
+                                            setTimeout(async () => {
+                                                await this.handleMint(values)
+                                                resetForm()
+                                                setSubmitting(false)
+                                            }, 1000)
+                                        }}
+                                    >
+                                        {
+                                            ({
+                                                 values,
+                                                 errors,
+                                                 touched,
+                                                 handleChange,
+                                                 handleBlur,
+                                                 handleSubmit,
+                                                 isSubmitting,
+                                                 setFieldValue,
+                                                 setFieldTouched,
+                                             }) => (
+                                                <Form onSubmit={handleSubmit} className={'row g-3'}>
+
+                                                    <Typography
+                                                        style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
+                                                        {'Estimated Cost:'}
+                                                    </Typography>
+
+                                                    <Typography
+                                                        style={{fontSize: 14, fontWeight: 'bold', color: 'white'}}>
+                                                        {`${values.amount === '' ? '--' : onlyWhitelisted ? presaleCost * parseFloat(values.amount) : cost * parseFloat(values.amount)} ETH`}
+                                                    </Typography>
+                                                    {/*<p style={{ marginTop: 15, fontSize: 12, fontWeight: 'light', color: '#989898', fontStyle: 'italic' }}>*/}
+                                                    {/*    Pre-sale Limit:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit}</span>*/}
+                                                    {/*    Public Sale Limit: <span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>{nftPerAddressLimit}</span>*/}
+                                                    {/*    Max per address:<span style={{ color: 'white', fontStyle: 'normal', fontWeight: 'bold', fontSize: 14, marginRight: 20 }}>  {nftPerAddressPresaleLimit + nftPerAddressLimit}</span>*/}
+                                                    {/*</p>*/}
+                                                    <Form.Group controlId={'formAmount'} className={'col-12'}>
+                                                        <Form.Label>Amount</Form.Label>
+                                                        <InputGroup
+                                                            size={'lg'}
+                                                            className={ClassNames([{'is-invalid': errors.amount}])}
+                                                        >
+                                                            <Button variant={'outline-secondary'} onClick={() => {
+                                                                    setFieldValue('amount', --values.amount)
+                                                                    setFieldTouched('amount')
+                                                                }}
+                                                                disabled={!mintDone}
+                                                            >
+                                                                <FontAwesomeIcon icon={'minus'}
+                                                                                 style={{marginRight: 0}}/>
+                                                            </Button>
+                                                            <Form.Control
+                                                                type={'number'} placeholder={'Enter amount'}
+                                                                name={'amount'} value={values.amount}
+                                                                className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
+                                                                autoComplete={'off'}
+                                                                onChange={handleChange}
+                                                                onBlur={handleBlur}
+                                                                disabled={!mintDone}
+                                                            />
+                                                            <Button variant={'outline-secondary'} onClick={() => {
+                                                                    setFieldValue('amount', ++values.amount)
+                                                                    setFieldTouched('amount')
+                                                                }}
+                                                                    disabled={!mintDone}
+
+                                                            >
+                                                                <FontAwesomeIcon icon={'plus'}
+                                                                                 style={{marginRight: 0}}/>
+                                                            </Button>
+                                                        </InputGroup>
+                                                        {touched.amount && errors.amount ? (
+                                                            <div className="invalid-feedback">{errors.amount}</div>
+                                                        ) : null}
+                                                    </Form.Group>
+                                                    <div className="col-12 text-end">
+                                                        <Button className={'mint-btn w-100'} variant={'primary'}
+                                                                type={'submit'}
+                                                                disabled={isSubmitting || !mintDone}>
+                                                            {isSubmitting &&
+                                                                <FontAwesomeIcon icon={'spinner-third'} spin/>}
+                                                            MiNT
+                                                        </Button>
+                                                        {
+                                                            this.state.showErrMsg ?
+                                                                <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.errMsg}</p> : null
+                                                        }
+                                                    </div>
+                                                </Form>
+                                            )
+                                        }
+                                    </Formik>
+                                </>
+                    }
+
                 </Modal>
             </div>
         )
