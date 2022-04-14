@@ -568,7 +568,7 @@ class HomePage extends React.Component {
                     <div className="container">
                         <div className="content ">
                             <h1 className={'logo'}>CRYPTO <br/> CHiMPZ</h1>
-                            <h2>TO THE MOOOOON</h2>
+                            <h2></h2>
                             <div className={'row gx-3'}>
                                 <div className="col-6">
                                     <Button as={'a'} href={'https://twitter.com/CryptoChimpzNFT'} target={'_blank'}
