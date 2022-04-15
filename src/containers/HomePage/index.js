@@ -28,6 +28,7 @@ import {ethers} from "ethers";
 import Contract from '../../config/Contract.json'
 
 import MetaMaskOnboarding from "@metamask/onboarding";
+import openSea from '../../assets/opensea.png'
 
 const currentUrl = new URL(window.location.href)
 const forwarderOrigin = currentUrl.hostname === 'localhost'
@@ -567,8 +568,9 @@ class HomePage extends React.Component {
                 <div className="wrapper banner">
                     <div className="container">
                         <div className="content ">
+                            <h2>EARN $APECOIN PASSIVELY SOON</h2>
                             <h1 className={'logo'}>CRYPTO <br/> CHiMPZ</h1>
-                            <div style={{marginTop: 70, marginBottom: 70}}  className={'row gx-3'}>
+                            <div style={{marginTop: 70, marginBottom: 70}}  className={'row gx-3 links'}>
                                 <div className="col-6">
                                     <Button as={'a'} href={'https://twitter.com/CryptoChimpzNFT'} target={'_blank'}
                                             variant={'twitter'} className={'rounded-pill'}>
@@ -581,6 +583,13 @@ class HomePage extends React.Component {
                                             variant={'discord'} className={'rounded-pill'}>
                                         <FontAwesomeIcon icon={['fab', 'discord']}/>
                                         Discord
+                                    </Button>
+                                </div>
+                                <div className="col-12" style={{ marginTop: 20 }}>
+                                    <Button as={'a'} href={'https://opensea.io/collection/cryptochimpz-nft'} target={'_blank'}
+                                            variant={'opensea'} className={'rounded-pill'}>
+                                        <img alt={'opensea image'} src={openSea} style={{ width: 20, height: 20, marginRight: 8 }} />
+                                        Opensea
                                     </Button>
                                 </div>
                             </div>

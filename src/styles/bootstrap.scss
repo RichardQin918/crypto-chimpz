@@ -16,7 +16,8 @@ $custom-colors: (
         "twitter": #1da1f2,
         "discord": #7289da,
         "instagram": #c13584,
-        "social": #8e67ea
+        "social": #8e67ea,
+        "opensea": #c13584
 );
 $theme-colors: map-merge($theme-colors, $custom-colors);
 
