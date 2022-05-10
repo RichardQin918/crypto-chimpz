@@ -51,6 +51,7 @@ class HomePage extends React.Component {
         this.state = {
             activeQuestion: '',
             mintModalVisible: false,
+            claimModalVisible: false,
             mintAmount: 0,
             address: '',
             networkId: 0,
@@ -80,13 +81,20 @@ class HomePage extends React.Component {
             addressMintedBalance: 0,
             showErrMsg: false,
             errMsg: '',
-            mintDone: true
+            mintDone: true,
+
+            claimMsg: '',
+            showClaimMsg: false,
+            claimDone: true,
+            availableReward: 0
         }
 
         this.confettiTrigger = null
         this.animationInstance = null
         this.openMintModal = this.openMintModal.bind(this)
         this.closeMintModal = this.closeMintModal.bind(this)
+        this.openClaimModal = this.openClaimModal.bind(this)
+        this.closeClaimModal = this.closeClaimModal.bind(this)
         this.toggleFAQ = this.toggleFAQ.bind(this)
     }
 
@@ -100,6 +108,20 @@ class HomePage extends React.Component {
             mintModalVisible: false,
             errMsg: '',
             showErrMsg: false
+        })
+    }
+
+    async openClaimModal() {
+        // await this.readContractInfo()
+        await this.getRewards()
+        this.setState({claimModalVisible: true})
+    }
+
+    closeClaimModal() {
+        this.setState({
+            claimModalVisible: false,
+            claimMsg: '',
+            showClaimMsg: false
         })
     }
 
@@ -317,6 +339,98 @@ class HomePage extends React.Component {
         }
     }
 
+    handleClaimReward = async (values) => {
+        const {address, cost, presaleCost, onlyWhitelisted} = this.state
+        console.log('address: ', address)
+        if (onlyWhitelisted) {
+            fetch(`https://crzmerkle.com/getProof?address=${address.toLowerCase()}`, {
+                method: 'GET',
+            }).then(async res => {
+                let result = await res.json()
+                console.log('get proof result: ', address, result)
+                if (result.message === 'address not whitelisted') {
+                    this.setState({
+                        showErrMsg: true,
+                        errMsg: `${address} is not whitelisted for presale`
+                    })
+                } else {
+                    // calling pre-sale
+                    this.setState({
+                        mintDone: false
+                    }, async () => {
+                        console.log('started')
+                        try {
+                            // let gasPrice = await this.provider.getGasPrice()
+                            // let overrides = {
+                            //     value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                            //     gasPrice: gasPrice
+                            // }
+                            // let gasLimit = await this.contract.estimateGas.earlyAccessSale(values.amount, result.proof, overrides)
+
+
+                            let options = {
+                                value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
+                                // gasLimit: gasLimit,
+                                // gasPrice: gasPrice
+                            }
+
+                            console.log('presale payload: ', values.amount, result.proof, options)
+                            let res = await this.contract.earlyAccessSale(values.amount, result.proof, options)
+                            console.log('presale hash: ', res.hash)
+                            if (res.hash !== null) {
+                                this.setState({
+                                    explorerHash: res.hash
+                                }, async () => {
+                                    let receipt = await res.wait()
+                                    console.log('presale receipt: ', receipt)
+                                    if (receipt !== null && receipt !== undefined) {
+                                        this.setState({
+                                            msgModalVisible: true,
+                                            mintModalVisible: false,
+                                            mintDone: true
+                                        })
+                                    }
+                                })
+                            }
+                        } catch (err) {
+                            console.log('presale call failed: ', err)
+                            this.setState({
+                                mintDone: true
+                            }, () => {
+                                if (err.reason !== undefined) {
+                                    if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: 'Not enough funds in your wallet'
+                                        })
+                                    } else {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: err.reason
+                                        })
+                                    }
+                                } else {
+                                    this.setState({
+                                        showErrMsg: true,
+                                        errMsg: err.message
+                                    })
+                                }
+                            })
+
+
+                        }
+                        this.setState({
+                            mintDone: true
+                        })
+
+                    })
+                }
+            }).catch(err => {
+                console.log('fetch failed: ', err)
+            })
+        }
+    }
+
     handleNewChain = (chainId) => {
         this.setState({
             chainId: chainId
@@ -379,10 +493,16 @@ class HomePage extends React.Component {
             // this.contract = new ethers.Contract(Contract.address, Contract.abi, this.provider)
             this.signer = (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
             this.contract = new ethers.Contract(Contract.address, Contract.abi, this.signer)
+
+
+            this.rewardContract= new ethers.Contract()
+
+
             this.setState({
                 startWatch: true
             }, async () => {
                 await this.readContractInfo()
+                await this.getRewards()
             })
         }
     }
@@ -460,6 +580,21 @@ class HomePage extends React.Component {
         } catch (err) {
             console.log('read contract info error: ', err)
         }
+    }
+
+    getRewards = async () => {
+        const { address } = this.state
+        console.log('address: ', address)
+        fetch(`http://192.168.0.11:8080/availableReward?address=${address.toLowerCase()}`, {
+            method: 'GET',
+        }).then(async res => {
+            console.log('here is reward: ', res)
+            if (res.status === 200) {
+                this.setState({
+                    availableReward: res.amount
+                })
+            }
+        })
     }
 
     sameAddress = (addr1, addr2) => {
@@ -606,13 +741,23 @@ class HomePage extends React.Component {
                                 Pre-sale Starts In
                             </h2>}
                         >
-                            <Button size={"lg"}
-                                    onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
-                                    disabled={!mintDone}
-                            >
-                                <FontAwesomeIcon icon={['fas', 'coins']}/>
-                                MiNT NOW!!!
-                            </Button>
+                            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
+                                <Button size={"lg"}
+                                        onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
+                                        disabled={!mintDone}
+                                >
+                                    <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                    MiNT NOW!!!
+                                </Button>
+                                <Button size={"lg"}
+                                        onClick={() => window.ethereum ? this.openClaimModal() : onBoard.startOnboarding()}
+                                        disabled={!mintDone}
+                                        style={{ backgroundColor: '#e8bf15', borderColor: '#e8bf15' }}
+                                >
+                                    <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                    CLAIM REWARDS
+                                </Button>
+                            </div>
                         </Countdown>
                     </div>
                 </div>
@@ -1002,6 +1147,83 @@ class HomePage extends React.Component {
                                     </Formik>
                                 </>
                     }
+
+                </Modal>
+
+
+                <Modal
+                    width="400px" title={'Reward Information'}
+                    visible={this.state.claimModalVisible}
+                    onClose={this.closeClaimModal}
+                >
+                    {
+                        this.state.availableReward === 0 ?
+
+                        <div className="status">
+                            <FontAwesomeIcon icon={'spinner-third'} spin/>
+                            <div className="message">
+                                Mo available rewards to claim
+                            </div>
+                        </div>
+                        :
+                        <>
+                            <Formik
+                                initialValues={{amount: 200}}
+                                onSubmit={async (values, {setSubmitting, resetForm}) => {
+                                    setSubmitting(true)
+                                    setTimeout(async () => {
+                                        await this.handleClaimReward(values)
+                                        resetForm()
+                                        setSubmitting(false)
+                                    }, 1000)
+                                }}
+                            >
+                                {
+                                    ({
+                                         values,
+                                         errors,
+                                         handleSubmit,
+                                         isSubmitting,
+                                     }) => (
+                                        <Form onSubmit={handleSubmit} className={'row g-3'}>
+                                            <Form.Group controlId={'formAmount'} className={'col-12'}>
+                                                <Form.Label>Reward available to claim</Form.Label>
+                                                <InputGroup
+                                                    size={'lg'}
+                                                    className={ClassNames([{'is-invalid': errors.amount}])}
+                                                >
+                                                    <Form.Control
+                                                        type={'number'} placeholder={'Enter amount'}
+                                                        name={'amount'} value={values.amount}
+                                                        className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
+                                                        style={{ backgroundColor: 'black' }}
+                                                        autoComplete={'off'}
+                                                        disabled={true}
+                                                    />
+                                                </InputGroup>
+                                            </Form.Group>
+                                            <div className="col-12 text-end">
+                                                <Button className={'mint-btn w-100'} variant={'primary'}
+                                                        type={'submit'}
+                                                        disabled={isSubmitting}>
+                                                    {isSubmitting &&
+                                                    <FontAwesomeIcon icon={'spinner-third'} spin/>}
+                                                    CLAIM
+                                                </Button>
+                                                {
+                                                    this.state.showClaimMsg ?
+                                                        <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.claimMsg}</p> : null
+                                                }
+                                            </div>
+                                        </Form>
+                                    )
+                                }
+                            </Formik>
+                        </>
+
+
+                    }
+
 
                 </Modal>
             </div>
