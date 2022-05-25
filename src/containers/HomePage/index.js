@@ -97,7 +97,11 @@ class HomePage extends React.Component {
             rewardSummary: [],
             isSyncedMsg: '',
             isSynced: true,
-            isSyncedChecked: false
+            isSyncedChecked: false,
+            setNewRootMsg: '',
+            setNewRootClicked: false,
+            hasClaimed: false,
+            canReset: true
         }
 
         this.confettiTrigger = null
@@ -148,7 +152,10 @@ class HomePage extends React.Component {
     closeAdminModal() {
         this.setState({
             adminModalVisible: false,
-            isSyncedChecked: false
+            isSyncedChecked: false,
+            isSyncedMsg: '',
+            setNewRootMsg: '',
+            setNewRootClicked: false
         })
     }
 
@@ -207,7 +214,7 @@ class HomePage extends React.Component {
 
     goToEtherscan = () => {
         const {explorerHash} = this.state
-        window.open(`https://etherscan.io/tx/${explorerHash}`, "_blank")
+        window.open(`https://rinkeby.etherscan.io/tx/${explorerHash}`, "_blank")
     }
 
     handleMint = async (values) => {
@@ -386,7 +393,7 @@ class HomePage extends React.Component {
                             let receipt = await res.wait()
                             console.log('reset receipt: ', receipt)
                             if (receipt !== null && receipt !== undefined) {
-                                let hasClaimed = this.rewardContract.hasClaimed()
+                                let hasClaimed = await this.rewardContract.hasClaimed()
                                 this.setState({
                                     resetDone: true,
                                     hasClaimed
@@ -715,7 +722,18 @@ class HomePage extends React.Component {
             let result = await res.json()
             if (this.state.currentRoothash !== '') {
                 console.log('updating: ', result.hash)
-                await this.rewardContract.setMerkleRoot(result.hash)
+                let res = await this.rewardContract.setMerkleRoot(result.hash)
+                this.setState({
+                    setNewRootClicked: true
+                })
+                if (res.hash !== null) {
+                    let receipt = await res.wait()
+                    if (receipt !== null && receipt !== undefined) {
+                        this.setState({
+                            setNewRootMsg: 'Root Hash Updated in Contract'
+                        })
+                    }
+                }
             }
         })
     }
@@ -1387,9 +1405,14 @@ class HomePage extends React.Component {
                                 variant={'primary'}
                                 type={'submit'}
                                 onClick={this.setNewRootHash}
+                                disabled={this.state.isSynced}
                             >
                                 {`Set New Root Hash`}
                             </Button>
+                            {
+                                this.state.setNewRootClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.setNewRootMsg}</p> : null
+                            }
                         </div>
                     </div>
                 </Modal>
