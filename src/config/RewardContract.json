@@ -1,5 +1,5 @@
 {
-  "address": "0x40e37ad169d1d3F84D3FbEfaaa15074fD2e3E52f",
+  "address": "0x9328110441e9C7e8eDC6Aca6AD87841BCa770b4d",
   "abi": [
     {
       "inputs": [],
@@ -59,6 +59,30 @@
     },
     {
       "inputs": [],
+      "name": "canReset",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
       "name": "checkRewardBalance",
       "outputs": [
         {
@@ -72,6 +96,11 @@
     },
     {
       "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "_token",
+          "type": "address"
+        },
         {
           "internalType": "uint256",
           "name": "amount",
@@ -122,6 +151,19 @@
     },
     {
       "inputs": [],
+      "name": "multiplier",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "owner",
       "outputs": [
         {
@@ -148,6 +190,32 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "rewardPerNFT",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "newCanReset",
+          "type": "bool"
+        }
+      ],
+      "name": "setCanReset",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes32",
@@ -156,6 +224,32 @@
         }
       ],
       "name": "setMerkleRoot",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "newMultipler",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMultiplier",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "newReward",
+          "type": "uint256"
+        }
+      ],
+      "name": "setRewardPerNFT",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

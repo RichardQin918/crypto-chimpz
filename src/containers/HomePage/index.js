@@ -26,9 +26,13 @@ import {Typography} from '@material-ui/core'
 
 import {ethers} from "ethers";
 import Contract from '../../config/Contract.json'
+import RewardContract from '../../config/RewardContract.json'
+import RewardTokenContract from '../../config/RewardTokenContract.json'
 
 import MetaMaskOnboarding from "@metamask/onboarding";
 import openSea from '../../assets/opensea.png'
+
+import Table from '../../components/Table/Table'
 
 const currentUrl = new URL(window.location.href)
 const forwarderOrigin = currentUrl.hostname === 'localhost'
@@ -86,7 +90,14 @@ class HomePage extends React.Component {
             claimMsg: '',
             showClaimMsg: false,
             claimDone: true,
-            availableReward: 0
+            availableReward: 0,
+            action: '',
+            rewardContractOwner: '',
+            adminModalVisible: false,
+            rewardSummary: [],
+            isSyncedMsg: '',
+            isSynced: true,
+            isSyncedChecked: false
         }
 
         this.confettiTrigger = null
@@ -95,7 +106,11 @@ class HomePage extends React.Component {
         this.closeMintModal = this.closeMintModal.bind(this)
         this.openClaimModal = this.openClaimModal.bind(this)
         this.closeClaimModal = this.closeClaimModal.bind(this)
+        this.openAdminModal = this.openAdminModal.bind(this)
+        this.closeAdminModal = this.closeAdminModal.bind(this)
         this.toggleFAQ = this.toggleFAQ.bind(this)
+        this.checkIfTreeSynced = this.checkIfTreeSynced.bind(this)
+        this.setNewRootHash = this.setNewRootHash.bind(this)
     }
 
     async openMintModal() {
@@ -112,8 +127,8 @@ class HomePage extends React.Component {
     }
 
     async openClaimModal() {
-        // await this.readContractInfo()
-        await this.getRewards()
+        await this.readRewardContractInfo()
+        await this.readRewardTokenContractInfo()
         this.setState({claimModalVisible: true})
     }
 
@@ -122,6 +137,18 @@ class HomePage extends React.Component {
             claimModalVisible: false,
             claimMsg: '',
             showClaimMsg: false
+        })
+    }
+
+    async openAdminModal() {
+        await this.readAdminInfo()
+        this.setState({adminModalVisible: true})
+    }
+
+    closeAdminModal() {
+        this.setState({
+            adminModalVisible: false,
+            isSyncedChecked: false
         })
     }
 
@@ -173,7 +200,8 @@ class HomePage extends React.Component {
 
     closeMsgModal = () => {
         this.setState({
-            msgModalVisible: false
+            msgModalVisible: false,
+            action: ''
         })
     }
 
@@ -228,6 +256,7 @@ class HomePage extends React.Component {
                                     console.log('presale receipt: ', receipt)
                                     if (receipt !== null && receipt !== undefined) {
                                         this.setState({
+                                            action: 'Mint',
                                             msgModalVisible: true,
                                             mintModalVisible: false,
                                             mintDone: true
@@ -339,55 +368,74 @@ class HomePage extends React.Component {
         }
     }
 
-    handleClaimReward = async (values) => {
-        const {address, cost, presaleCost, onlyWhitelisted} = this.state
-        console.log('address: ', address)
-        if (onlyWhitelisted) {
-            fetch(`https://crzmerkle.com/getProof?address=${address.toLowerCase()}`, {
+    handleClaimReward = async () => {
+        const {address, availableReward, canReset, hasClaimed} = this.state
+        console.log('address: ', address, availableReward)
+        if (hasClaimed && canReset) {
+            this.setState({
+                resetDone: false
+            }, async () => {
+                console.log('start reset')
+                try {
+                    let res = await this.rewardContract.resetClaimed()
+                    console.log('reset hash: ', res.hash)
+                    if (res.hash !== null) {
+                        this.setState({
+                            explorerHash: res.hash
+                        }, async () => {
+                            let receipt = await res.wait()
+                            console.log('reset receipt: ', receipt)
+                            if (receipt !== null && receipt !== undefined) {
+                                let hasClaimed = this.rewardContract.hasClaimed()
+                                this.setState({
+                                    resetDone: true,
+                                    hasClaimed
+                                })
+                            }
+                        })
+                    }
+                } catch(err) {
+                    console.log('reset failed: ', err)
+                }
+            })
+
+        } else {
+            fetch(`http://192.168.0.10:8080/getProof?address=${address.toLowerCase()}&amount=${availableReward}`, {
                 method: 'GET',
             }).then(async res => {
                 let result = await res.json()
-                console.log('get proof result: ', address, result)
-                if (result.message === 'address not whitelisted') {
+                console.log('get claim proof result: ', address, result)
+                if (result.message === 'address not rewardListed or invalid claim amount') {
                     this.setState({
                         showErrMsg: true,
-                        errMsg: `${address} is not whitelisted for presale`
+                        errMsg: `${address} is not rewardListed or invalid claim amount`
                     })
                 } else {
                     // calling pre-sale
                     this.setState({
-                        mintDone: false
+                        claimDone: false
                     }, async () => {
-                        console.log('started')
+                        console.log('started claim')
                         try {
-                            // let gasPrice = await this.provider.getGasPrice()
-                            // let overrides = {
+                            // let options = {
                             //     value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
-                            //     gasPrice: gasPrice
                             // }
-                            // let gasLimit = await this.contract.estimateGas.earlyAccessSale(values.amount, result.proof, overrides)
 
-
-                            let options = {
-                                value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
-                                // gasLimit: gasLimit,
-                                // gasPrice: gasPrice
-                            }
-
-                            console.log('presale payload: ', values.amount, result.proof, options)
-                            let res = await this.contract.earlyAccessSale(values.amount, result.proof, options)
-                            console.log('presale hash: ', res.hash)
+                            console.log('claim payload: ',  this.rewardTokenContract.address, availableReward, result.proof)
+                            let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, availableReward, result.proof)
+                            console.log('claim hash: ', res.hash)
                             if (res.hash !== null) {
                                 this.setState({
                                     explorerHash: res.hash
                                 }, async () => {
                                     let receipt = await res.wait()
-                                    console.log('presale receipt: ', receipt)
+                                    console.log('claim receipt: ', receipt)
                                     if (receipt !== null && receipt !== undefined) {
                                         this.setState({
+                                            action: 'Claim',
                                             msgModalVisible: true,
-                                            mintModalVisible: false,
-                                            mintDone: true
+                                            claimModalVisible: false,
+                                            claimDone: true
                                         })
                                     }
                                 })
@@ -395,7 +443,7 @@ class HomePage extends React.Component {
                         } catch (err) {
                             console.log('presale call failed: ', err)
                             this.setState({
-                                mintDone: true
+                                claimDone: true
                             }, () => {
                                 if (err.reason !== undefined) {
                                     if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
@@ -420,13 +468,13 @@ class HomePage extends React.Component {
 
                         }
                         this.setState({
-                            mintDone: true
+                            claimDone: true
                         })
 
                     })
                 }
             }).catch(err => {
-                console.log('fetch failed: ', err)
+                console.log('claim fetch failed: ', err)
             })
         }
     }
@@ -493,16 +541,15 @@ class HomePage extends React.Component {
             // this.contract = new ethers.Contract(Contract.address, Contract.abi, this.provider)
             this.signer = (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
             this.contract = new ethers.Contract(Contract.address, Contract.abi, this.signer)
-
-
-            this.rewardContract= new ethers.Contract()
-
+            this.rewardContract= new ethers.Contract(RewardContract.address, RewardContract.abi, this.signer)
+            this.rewardTokenContract = new ethers.Contract(RewardTokenContract.address, RewardTokenContract.abi, this.signer)
 
             this.setState({
                 startWatch: true
             }, async () => {
                 await this.readContractInfo()
-                await this.getRewards()
+                await this.readRewardContractInfo()
+                await this.readRewardTokenContractInfo()
             })
         }
     }
@@ -582,16 +629,54 @@ class HomePage extends React.Component {
         }
     }
 
+    readRewardContractInfo = async () => {
+        const { address } = this.state
+        this.getRewards().then(() => {
+            const { availableReward } = this.state
+            console.log('reward: ', availableReward)
+        })
+        let hasClaimed = await this.rewardContract.hasClaimed(address)
+        let canReset = await this.rewardContract.canReset()
+        let rewardContractOwner = await this.rewardContract.owner()
+        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner)
+        this.setState({
+            canReset, hasClaimed, rewardContractOwner
+        })
+    }
+
+    readRewardTokenContractInfo = async () => {
+        let rewardToken = await this.rewardTokenContract.symbol()
+        console.log('rewardToken: ', rewardToken)
+        this.setState({
+            rewardToken
+        })
+    }
+
+    readAdminInfo = async () => {
+        fetch(`http://192.168.0.10:8080/getSummary`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            console.log('here is summary: ', result)
+            if (res.status === 200) {
+                this.setState({
+                    rewardSummary: result.data
+                })
+            }
+        })
+    }
+
     getRewards = async () => {
         const { address } = this.state
         console.log('address: ', address)
-        fetch(`http://192.168.0.11:8080/availableReward?address=${address.toLowerCase()}`, {
+        fetch(`http://192.168.0.10:8080/getOwnerRewardFromDB?address=${address.toLowerCase()}`, {
             method: 'GET',
         }).then(async res => {
-            console.log('here is reward: ', res)
+            let result = await res.json()
+            console.log('here is reward: ', result)
             if (res.status === 200) {
                 this.setState({
-                    availableReward: res.amount
+                    availableReward: result.data.reward
                 })
             }
         })
@@ -602,6 +687,38 @@ class HomePage extends React.Component {
 
     }
 
+    checkIfTreeSynced = () => {
+        this.setState({
+            isSyncedChecked: true
+        })
+        fetch(`http://192.168.0.10:8080/getRootHash`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            let contractRootHash = await this.rewardContract.merkleRoot()
+            let isSynced = result.hash.toLowerCase() === contractRootHash.toLowerCase()
+            console.log('isSynced: ', isSynced)
+            if (res.status === 200) {
+                this.setState({
+                    currentRoothash: result.hash,
+                    isSynced,
+                    isSyncedMsg: isSynced ? 'Tree is synced' : 'Tree is not synced !, You should update tree root',
+                })
+            }
+        })
+    }
+
+    setNewRootHash = () => {
+        fetch(`http://192.168.0.10:8080/getRootHash`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            if (this.state.currentRoothash !== '') {
+                console.log('updating: ', result.hash)
+                await this.rewardContract.setMerkleRoot(result.hash)
+            }
+        })
+    }
 
     async componentDidMount() {
         // Hack to force scroll triggers to work properly, TODO: listen for image load event
@@ -757,6 +874,17 @@ class HomePage extends React.Component {
                                     <FontAwesomeIcon icon={['fas', 'coins']}/>
                                     CLAIM REWARDS
                                 </Button>
+                                {
+                                    this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
+                                        <Button size={"lg"}
+                                                onClick={() => window.ethereum ? this.openAdminModal() : onBoard.startOnboarding()}
+                                                disabled={!mintDone}
+                                                style={{ backgroundColor: '#c13584', borderColor: '#c13584' }}
+                                        >
+                                            <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                            ADMIN
+                                        </Button> : null
+                                }
                             </div>
                         </Countdown>
                     </div>
@@ -773,7 +901,7 @@ class HomePage extends React.Component {
                                 </h2>
                                 <p>
                                     Join us on our CryptoChimpz journey by viewing our roadmap. Strap in as the road
-                                    ahead is bumpy, but fruitful! The CryptoChimpz were forced into turmoil and 10,000
+                                    ahead is bumpy, but fruitful! The CryptoChimpz were forced into turmoil and 5,000
                                     of them have been captured after a brutal invasion by humans on the ChimpStar
                                     Galaxy. The Chimpz have suffered brutal testing by the humans in their labs, but
                                     have now broken free.
@@ -901,7 +1029,7 @@ class HomePage extends React.Component {
                                     <h3>Wait, there’s more!</h3>
                                     <p>
                                         The skies light up and we see 100’s of spaceships landing, that’s right,
-                                        ChimpWives to the rescue! 10,000 ChimpWives have come to the help of their
+                                        ChimpWives to the rescue! 5,000 ChimpWives have come to the help of their
                                         beloved CryptoChimpz to take them back to the ChimpStar Galaxy. Congratulations!
                                     </p>
                                     <p>
@@ -933,7 +1061,7 @@ class HomePage extends React.Component {
                             </p>
                         </div>
                         <div className="item">
-                            <h3>STAKING ($CHIMPZ)</h3>
+                            <h3>$APE COIN CLAIMS</h3>
                             <p>
                                 Crypto Chimp holders can <strong>stake their NFTs</strong> and
                                 earn <strong>daily</strong> tokens. Holders will have the option to use the tokens to
@@ -1013,7 +1141,7 @@ class HomePage extends React.Component {
                     <div className="status">
                         <FontAwesomeIcon icon={'check-circle'}/>
                         <div className="message">
-                            Mint Requested <br/><br/>
+                            {`${this.state.action} Requested`} <br/><br/>
                             <Button variant={'primary'} onClick={this.goToEtherscan}>
                                 Check On Etherscan
                             </Button>
@@ -1157,74 +1285,113 @@ class HomePage extends React.Component {
                     onClose={this.closeClaimModal}
                 >
                     {
-                        this.state.availableReward === 0 ?
-
-                        <div className="status">
-                            <FontAwesomeIcon icon={'spinner-third'} spin/>
-                            <div className="message">
-                                Mo available rewards to claim
-                            </div>
-                        </div>
-                        :
-                        <>
-                            <Formik
-                                initialValues={{amount: 200}}
-                                onSubmit={async (values, {setSubmitting, resetForm}) => {
-                                    setSubmitting(true)
-                                    setTimeout(async () => {
-                                        await this.handleClaimReward(values)
-                                        resetForm()
-                                        setSubmitting(false)
-                                    }, 1000)
-                                }}
-                            >
-                                {
-                                    ({
-                                         values,
-                                         errors,
-                                         handleSubmit,
-                                         isSubmitting,
-                                     }) => (
-                                        <Form onSubmit={handleSubmit} className={'row g-3'}>
-                                            <Form.Group controlId={'formAmount'} className={'col-12'}>
-                                                <Form.Label>Reward available to claim</Form.Label>
-                                                <InputGroup
-                                                    size={'lg'}
-                                                    className={ClassNames([{'is-invalid': errors.amount}])}
-                                                >
-                                                    <Form.Control
-                                                        type={'number'} placeholder={'Enter amount'}
-                                                        name={'amount'} value={values.amount}
-                                                        className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
-                                                        style={{ backgroundColor: 'black' }}
-                                                        autoComplete={'off'}
-                                                        disabled={true}
-                                                    />
-                                                </InputGroup>
-                                            </Form.Group>
-                                            <div className="col-12 text-end">
-                                                <Button className={'mint-btn w-100'} variant={'primary'}
-                                                        type={'submit'}
-                                                        disabled={isSubmitting}>
-                                                    {isSubmitting &&
-                                                    <FontAwesomeIcon icon={'spinner-third'} spin/>}
-                                                    CLAIM
-                                                </Button>
-                                                {
-                                                    this.state.showClaimMsg ?
-                                                        <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.claimMsg}</p> : null
-                                                }
-                                            </div>
-                                        </Form>
-                                    )
-                                }
-                            </Formik>
-                        </>
-
-
+                        this.state.hasClaimed && !this.state.canReset ?
+                            <div className="status">
+                                <FontAwesomeIcon icon={'spinner-third'} spin/>
+                                <div className="message">
+                                    You have already claimed your reward.
+                                    Please wait for next round of reward to be distributed
+                                </div>
+                            </div> :
+                                this.state.availableReward === 0 ?
+                                    <div className="status">
+                                        <FontAwesomeIcon icon={'spinner-third'} spin/>
+                                        <div className="message">
+                                            No available rewards to claim
+                                        </div>
+                                    </div>
+                                    :
+                                    <>
+                                        <Formik
+                                            initialValues={{amount: this.state.availableReward, token: this.state.rewardToken}}
+                                            onSubmit={async (values, {setSubmitting, resetForm}) => {
+                                                setSubmitting(true)
+                                                setTimeout(async () => {
+                                                    await this.handleClaimReward(values)
+                                                    resetForm()
+                                                    setSubmitting(false)
+                                                }, 1000)
+                                            }}
+                                        >
+                                            {
+                                                ({
+                                                     values,
+                                                     errors,
+                                                     handleSubmit,
+                                                     isSubmitting,
+                                                 }) => (
+                                                    <Form onSubmit={handleSubmit} className={'row g-3'}>
+                                                        <Form.Group controlId={'formAmount'} className={'col-12'}>
+                                                            <Form.Label>{`${values.token} coin available to claim`}</Form.Label>
+                                                            <InputGroup
+                                                                size={'lg'}
+                                                                className={ClassNames([{'is-invalid': errors.amount}])}
+                                                            >
+                                                                <Form.Control
+                                                                    type={'number'} placeholder={'Enter amount'}
+                                                                    name={'amount'} value={values.amount}
+                                                                    className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
+                                                                    style={{ backgroundColor: 'black' }}
+                                                                    autoComplete={'off'}
+                                                                    disabled={true}
+                                                                />
+                                                            </InputGroup>
+                                                        </Form.Group>
+                                                        <div className="col-12 text-end">
+                                                            <Button className={'mint-btn w-100'} variant={'primary'}
+                                                                    type={'submit'}
+                                                                    disabled={isSubmitting}>
+                                                                {isSubmitting &&
+                                                                <FontAwesomeIcon icon={'spinner-third'} spin/>}
+                                                                {this.state.hasClaimed && this.state.canReset ? `ACTIVATE TO CLAIM` : `CLAIM`}
+                                                            </Button>
+                                                            {
+                                                                this.state.showClaimMsg ?
+                                                                    <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.claimMsg}</p> : null
+                                                            }
+                                                        </div>
+                                                    </Form>
+                                                )
+                                            }
+                                        </Formik>
+                                    </>
                     }
+                </Modal>
 
-
+                <Modal
+                    width="800px" title={'Admin Information'}
+                    visible={this.state.adminModalVisible}
+                    onClose={this.closeAdminModal}
+                >
+                    <div>
+                        <Table listData={this.state.rewardSummary}/>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-100'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.checkIfTreeSynced}
+                            >
+                                {`Check Sync`}
+                            </Button>
+                            {
+                                this.state.isSyncedChecked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: !this.state.isSynced ? 'red' : 'green' }}>{this.state.isSyncedMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-100'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.setNewRootHash}
+                            >
+                                {`Set New Root Hash`}
+                            </Button>
+                        </div>
+                    </div>
                 </Modal>
             </div>
         )
