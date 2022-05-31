@@ -23,6 +23,7 @@ import ReactCanvasConfetti from "react-canvas-confetti";
 import ClassNames from "classnames";
 
 import {Typography} from '@material-ui/core'
+import {isMobile} from 'react-device-detect';
 
 import {ethers} from "ethers";
 import Contract from '../../config/Contract.json'
@@ -113,7 +114,8 @@ class HomePage extends React.Component {
             checkCanResetClicked: false,
             switchCanResetClicked: false,
             canResetMsg: '',
-            switchCanResetMsg: ''
+            switchCanResetMsg: '',
+            decimals: 1000000000000000000
         }
 
         this.confettiTrigger = null
@@ -446,11 +448,7 @@ class HomePage extends React.Component {
                     }, async () => {
                         console.log('started claim')
                         try {
-                            // let options = {
-                            //     value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
-                            // }
-
-                            console.log('claim payload: ',  this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier), result.proof)
+                            console.log('claim payload: ',  this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier))
                             let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier), result.proof)
                             console.log('claim hash: ', res.hash)
                             if (res.hash !== null) {
@@ -669,8 +667,8 @@ class HomePage extends React.Component {
         let canReset = await this.rewardContract.canReset()
         let rewardContractOwner = await this.rewardContract.owner()
         let localMultiplier = await this.rewardContract.localMultiplier()
-        let rewardContractBalance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
-        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner)
+        let rewardContractBalance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
+        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner, rewardContractBalance, typeof rewardContractBalance)
         this.setState({
             canReset, hasClaimed, rewardContractOwner, localMultiplier, rewardContractBalance
         })
@@ -794,7 +792,7 @@ class HomePage extends React.Component {
     }
 
     checkContractBalance = async () => {
-        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
+        let balance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
         this.setState({
             rewardContractBalance: balance,
             contractBalanceMsg: `Current Balance: ${balance.toString()} ${this.state.rewardToken}`,
@@ -803,7 +801,7 @@ class HomePage extends React.Component {
     }
 
     withdrawAll = async () => {
-        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
+        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()
         let res = await this.rewardContract.withdrawToken(this.rewardTokenContract.address, balance)
         if (res.hash !== null) {
             let receipt = await res.wait()
@@ -972,50 +970,44 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Countdown
-                            date={new Date('2021-05-31T20:00:00-05:00')}
-                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
-                                REWARD CLAIMING STARTS IN
-                            </h2>}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                            <Button size={"lg"}
+                                    onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
+                                    disabled={!mintDone}
+                                    style={{ marginBottom: isMobile ? '15px' : null }}
+                            >
+                                <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                MiNT NOW!!!
+                            </Button>
+                            <Countdown
+                                date={new Date('2022-05-31T20:00:00-05:00')}
+                                prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
+                                    REWARD CLAIMING STARTS IN
+                                </h2>}
+                            >
                                 <Button size={"lg"}
-                                        onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
+                                        onClick={() => window.ethereum ? this.openClaimModal() : onBoard.startOnboarding()}
                                         disabled={!mintDone}
+                                        style={{ backgroundColor: '#e8bf15', borderColor: '#e8bf15', marginBottom: isMobile ? '15px' : null }}
                                 >
                                     <FontAwesomeIcon icon={['fas', 'coins']}/>
-                                    MiNT NOW!!!
+                                    CLAIM REWARDS
                                 </Button>
-                                <Countdown
-                                    date={new Date('2022-05-31T21:00:00-05:00')}
-                                    prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
-                                        REWARD CLAIMING STARTS IN
-                                    </h2>}
-                                >
+                            </Countdown>
+
+                            {
+                                this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
                                     <Button size={"lg"}
-                                            onClick={() => window.ethereum ? this.openClaimModal() : onBoard.startOnboarding()}
+                                            onClick={() => window.ethereum ? this.openAdminModal() : onBoard.startOnboarding()}
                                             disabled={!mintDone}
-                                            style={{ backgroundColor: '#e8bf15', borderColor: '#e8bf15' }}
+                                            style={{ backgroundColor: '#c13584', borderColor: '#c13584' }}
                                     >
                                         <FontAwesomeIcon icon={['fas', 'coins']}/>
-                                        CLAIM REWARDS
+                                        ADMIN
                                     </Button>
-                                </Countdown>
-
-                                {
-                                    this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
-                                        <Button size={"lg"}
-                                                onClick={() => window.ethereum ? this.openAdminModal() : onBoard.startOnboarding()}
-                                                disabled={!mintDone}
-                                                style={{ backgroundColor: '#c13584', borderColor: '#c13584' }}
-                                        >
-                                            <FontAwesomeIcon icon={['fas', 'coins']}/>
-                                            ADMIN
-                                        </Button>
-                                    : null
-                                }
-                            </div>
-                        </Countdown>
+                                : null
+                            }
+                        </div>
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>
