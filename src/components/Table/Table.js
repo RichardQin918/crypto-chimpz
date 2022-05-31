@@ -17,7 +17,6 @@ class Table extends React.Component {
         super(props);
     }
     componentDidMount() {
-        console.log('list data: ', this.props.listData)
     }
 
     render() {

@@ -108,7 +108,12 @@ class HomePage extends React.Component {
             rewardContractBalance: 0,
             contractBalanceMsg: '',
             contractBalanceClicked: false,
-            rewardToken: ''
+            rewardToken: '',
+            apiUrl: "https://crzmerkle.com/",
+            checkCanResetClicked: false,
+            switchCanResetClicked: false,
+            canResetMsg: '',
+            switchCanResetMsg: ''
         }
 
         this.confettiTrigger = null
@@ -140,6 +145,7 @@ class HomePage extends React.Component {
     async openClaimModal() {
         await this.readRewardContractInfo()
         await this.readRewardTokenContractInfo()
+        await this.getSwitch()
         this.setState({claimModalVisible: true})
     }
 
@@ -166,7 +172,12 @@ class HomePage extends React.Component {
             withdrawAllMsg: '',
             withdrawAllClicked: false,
             contractBalanceMsg: '',
-            contractBalanceClicked: false
+            contractBalanceClicked: false,
+            canResetMsg: '',
+            checkCanResetClicked: false,
+            switchCanResetMsg: '',
+            switchCanResetClicked: false
+
         })
     }
 
@@ -225,7 +236,7 @@ class HomePage extends React.Component {
 
     goToEtherscan = () => {
         const {explorerHash} = this.state
-        window.open(`https://rinkeby.etherscan.io/tx/${explorerHash}`, "_blank")
+        window.open(`https://etherscan.io/tx/${explorerHash}`, "_blank")
     }
 
     handleMint = async (values) => {
@@ -418,7 +429,7 @@ class HomePage extends React.Component {
             })
 
         } else {
-            fetch(`http://192.168.0.10:8080/getProof?address=${address.toLowerCase()}&amount=${availableReward}`, {
+            fetch(`${this.state.apiUrl}getProof?address=${address.toLowerCase()}&amount=${availableReward}`, {
                 method: 'GET',
             }).then(async res => {
                 let result = await res.json()
@@ -495,6 +506,7 @@ class HomePage extends React.Component {
                 console.log('claim fetch failed: ', err)
             })
         }
+
     }
 
     handleNewChain = (chainId) => {
@@ -672,12 +684,28 @@ class HomePage extends React.Component {
         })
     }
 
-    readAdminInfo = async () => {
-        fetch(`http://192.168.0.10:8080/getSummary`, {
+    getSwitch = async () => {
+        fetch(`${this.state.apiUrl}getSwitch`, {
             method: 'GET',
         }).then(async res => {
             let result = await res.json()
-            console.log('here is summary: ', result)
+            console.log('switch status: ', result)
+            this.setState({
+                dbUpdating: result.updating
+            })
+        }).catch(err => {
+            console.log('get switch failed: ', err)
+            this.setState({
+                dbUpdating: true
+            })
+        })
+    }
+
+    readAdminInfo = async () => {
+        fetch(`${this.state.apiUrl}getSummary`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
             let dataList = result.data.map(item => {
                 return {
                     addr: item.addr,
@@ -696,15 +724,22 @@ class HomePage extends React.Component {
     getRewards = async () => {
         const { address } = this.state
         console.log('address: ', address)
-        fetch(`http://192.168.0.10:8080/getOwnerRewardFromDB?address=${address.toLowerCase()}`, {
+        fetch(`${this.state.apiUrl}getOwnerRewardFromDB?address=${address.toLowerCase()}`, {
             method: 'GET',
         }).then(async res => {
             let result = await res.json()
             console.log('here is reward: ', result)
             if (res.status === 200) {
-                this.setState({
-                    availableReward: result.data.reward / 10000
-                })
+                if (result.data.msg === 'address not found') {
+                    this.setState({
+                        availableReward: 0
+                    })
+                } else {
+                    this.setState({
+                        availableReward: result.data.reward / 10000
+                    })
+                }
+
             }
         })
     }
@@ -718,7 +753,7 @@ class HomePage extends React.Component {
         this.setState({
             isSyncedChecked: true
         })
-        fetch(`http://192.168.0.10:8080/getRootHash`, {
+        fetch(`${this.state.apiUrl}getRootHash`, {
             method: 'GET',
         }).then(async res => {
             let result = await res.json()
@@ -736,7 +771,7 @@ class HomePage extends React.Component {
     }
 
     setNewRootHash = () => {
-        fetch(`http://192.168.0.10:8080/getRootHash`, {
+        fetch(`${this.state.apiUrl}getRootHash`, {
             method: 'GET',
         }).then(async res => {
             let result = await res.json()
@@ -776,6 +811,31 @@ class HomePage extends React.Component {
                 this.setState({
                     withdrawAllMsg: 'Withdraw all tokens requested',
                     withdrawAllClicked: true
+                })
+            }
+        }
+    }
+
+    checkReset = async () => {
+        let canReset = await this.rewardContract.canReset()
+        console.log('this is canReset: ', canReset)
+        this.setState({
+            canResetMsg: `canReset status: ${canReset}`,
+            checkCanResetClicked: true
+        })
+    }
+
+    switchCanReset = async () => {
+        let canReset = await this.rewardContract.canReset()
+        let res = await this.rewardContract.setCanReset(!canReset)
+        if (res.hash !== null) {
+            let receipt = await res.wait()
+            if (receipt !== null && receipt !== undefined) {
+                let canReset = await this.rewardContract.canReset()
+                this.setState({
+                    switchCanResetMsg: 'canReset updated',
+                    switchCanResetClicked: true,
+                    canReset
                 })
             }
         }
@@ -913,13 +973,12 @@ class HomePage extends React.Component {
                 <div className="wrapper mint">
                     <div className="container">
                         <Countdown
-                            // date={new Date('2021-12-25T14:46:25-05:00')}
-                            date={new Date('2021-12-27T00:00:00-05:00')}
+                            date={new Date('2021-05-31T20:00:00-05:00')}
                             prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
-                                Pre-sale Starts In
+                                REWARD CLAIMING STARTS IN
                             </h2>}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
+                            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                                 <Button size={"lg"}
                                         onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
                                         disabled={!mintDone}
@@ -927,14 +986,22 @@ class HomePage extends React.Component {
                                     <FontAwesomeIcon icon={['fas', 'coins']}/>
                                     MiNT NOW!!!
                                 </Button>
-                                <Button size={"lg"}
-                                        onClick={() => window.ethereum ? this.openClaimModal() : onBoard.startOnboarding()}
-                                        disabled={!mintDone}
-                                        style={{ backgroundColor: '#e8bf15', borderColor: '#e8bf15' }}
+                                <Countdown
+                                    date={new Date('2022-05-31T21:00:00-05:00')}
+                                    prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
+                                        REWARD CLAIMING STARTS IN
+                                    </h2>}
                                 >
-                                    <FontAwesomeIcon icon={['fas', 'coins']}/>
-                                    CLAIM REWARDS
-                                </Button>
+                                    <Button size={"lg"}
+                                            onClick={() => window.ethereum ? this.openClaimModal() : onBoard.startOnboarding()}
+                                            disabled={!mintDone}
+                                            style={{ backgroundColor: '#e8bf15', borderColor: '#e8bf15' }}
+                                    >
+                                        <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                        CLAIM REWARDS
+                                    </Button>
+                                </Countdown>
+
                                 {
                                     this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
                                         <Button size={"lg"}
@@ -944,7 +1011,8 @@ class HomePage extends React.Component {
                                         >
                                             <FontAwesomeIcon icon={['fas', 'coins']}/>
                                             ADMIN
-                                        </Button> : null
+                                        </Button>
+                                    : null
                                 }
                             </div>
                         </Countdown>
@@ -1341,81 +1409,89 @@ class HomePage extends React.Component {
 
 
                 <Modal
-                    width="400px" title={'Reward Information'}
+                    width="400px" title={'CURRENT CLAIM BALANCE'}
                     visible={this.state.claimModalVisible}
                     onClose={this.closeClaimModal}
                 >
                     {
-                        this.state.hasClaimed && !this.state.canReset ?
+                        this.state.dbUpdating ?
                             <div className="status">
                                 <FontAwesomeIcon icon={'spinner-third'} spin/>
                                 <div className="message">
-                                    You have already claimed your reward.
-                                    Please wait for next round of reward to be distributed
+                                    Updating rewards, please try again later
                                 </div>
                             </div> :
-                                this.state.availableReward === 0 ?
+                                this.state.hasClaimed && !this.state.canReset ?
                                     <div className="status">
                                         <FontAwesomeIcon icon={'spinner-third'} spin/>
                                         <div className="message">
-                                            No available rewards to claim
+                                            You have already claimed your reward.
+                                            Please wait for next round of reward to be distributed
                                         </div>
-                                    </div>
-                                    :
-                                    <>
-                                        <Formik
-                                            initialValues={{amount: this.state.availableReward, token: this.state.rewardToken}}
-                                            onSubmit={async (values, {setSubmitting, resetForm}) => {
-                                                setSubmitting(true)
-                                                setTimeout(async () => {
-                                                    await this.handleClaimReward(values)
-                                                    resetForm()
-                                                    setSubmitting(false)
-                                                }, 1000)
-                                            }}
-                                        >
-                                            {
-                                                ({
-                                                     values,
-                                                     errors,
-                                                     handleSubmit,
-                                                     isSubmitting,
-                                                 }) => (
-                                                    <Form onSubmit={handleSubmit} className={'row g-3'}>
-                                                        <Form.Group controlId={'formAmount'} className={'col-12'}>
-                                                            <Form.Label>{`${values.token} coin available to claim`}</Form.Label>
-                                                            <InputGroup
-                                                                size={'lg'}
-                                                                className={ClassNames([{'is-invalid': errors.amount}])}
-                                                            >
-                                                                <Form.Control
-                                                                    type={'number'} placeholder={'Enter amount'}
-                                                                    name={'amount'} value={values.amount}
-                                                                    className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
-                                                                    style={{ backgroundColor: 'black' }}
-                                                                    autoComplete={'off'}
-                                                                    disabled={true}
-                                                                />
-                                                            </InputGroup>
-                                                        </Form.Group>
-                                                        <div className="col-12 text-end">
-                                                            <Button className={'mint-btn w-100'} variant={'primary'}
-                                                                    type={'submit'}
-                                                                    disabled={isSubmitting}>
-                                                                {isSubmitting &&
-                                                                <FontAwesomeIcon icon={'spinner-third'} spin/>}
-                                                                {this.state.hasClaimed ? `ACTIVATE TO CLAIM` : `CLAIM`}
-                                                            </Button>
-                                                            {
-                                                                this.state.showClaimMsg ?
-                                                                    <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.claimMsg}</p> : null
-                                                            }
-                                                        </div>
-                                                    </Form>
-                                                )
-                                            }
-                                        </Formik>
-                                    </>
+                                    </div> :
+                                        this.state.availableReward === 0 ?
+                                            <div className="status">
+                                                <FontAwesomeIcon icon={'spinner-third'} spin/>
+                                                <div className="message">
+                                                    No available rewards to claim
+                                                </div>
+                                            </div>
+                                            :
+                                            <>
+                                                <Formik
+                                                    initialValues={{amount: this.state.availableReward, token: this.state.rewardToken}}
+                                                    onSubmit={async (values, {setSubmitting, resetForm}) => {
+                                                        setSubmitting(true)
+                                                        setTimeout(async () => {
+                                                            await this.handleClaimReward(values)
+                                                            resetForm()
+                                                            setSubmitting(false)
+                                                        }, 1000)
+                                                    }}
+                                                >
+                                                    {
+                                                        ({
+                                                             values,
+                                                             errors,
+                                                             handleSubmit,
+                                                             isSubmitting,
+                                                         }) => (
+                                                            <Form onSubmit={handleSubmit} className={'row g-3'}>
+                                                                <Form.Group controlId={'formAmount'} className={'col-12'}>
+                                                                    <Form.Label>{`$${values.token} available to claim !`}</Form.Label>
+                                                                    <Form.Label>{`The following balance can be withdrawn now or it can be accumulated and withdrawn at a later time.`}</Form.Label>
+                                                                    <InputGroup
+                                                                        size={'lg'}
+                                                                        className={ClassNames([{'is-invalid': errors.amount}])}
+                                                                    >
+                                                                        <Form.Control
+                                                                            type={'number'} placeholder={'Enter amount'}
+                                                                            name={'amount'} value={values.amount}
+                                                                            className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
+                                                                            style={{ backgroundColor: 'black' }}
+                                                                            autoComplete={'off'}
+                                                                            disabled={true}
+                                                                        />
+                                                                    </InputGroup>
+                                                                </Form.Group>
+                                                                <div className="col-12 text-end">
+                                                                    <Button className={'mint-btn w-100'} variant={'primary'}
+                                                                            type={'submit'}
+                                                                            disabled={isSubmitting}>
+                                                                        {isSubmitting &&
+                                                                        <FontAwesomeIcon icon={'spinner-third'} spin/>}
+                                                                        {this.state.hasClaimed ? `ACTIVATE TO WITHDRAW` : `WITHDRAW`}
+                                                                    </Button>
+                                                                    {
+                                                                        this.state.showClaimMsg ?
+                                                                            <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.claimMsg}</p> : null
+                                                                    }
+                                                                </div>
+                                                            </Form>
+                                                        )
+                                                    }
+                                                </Formik>
+                                            </>
                     }
                 </Modal>
 
@@ -1430,7 +1506,7 @@ class HomePage extends React.Component {
                     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
                         <div className="text-end">
                             <Button
-                                className={'mint-btn w-100'}
+                                className={'mint-btn w-80'}
                                 variant={'primary'}
                                 type={'submit'}
                                 onClick={this.checkIfTreeSynced}
@@ -1444,7 +1520,7 @@ class HomePage extends React.Component {
                         </div>
                         <div className="text-end">
                             <Button
-                                className={'mint-btn w-100'}
+                                className={'mint-btn w-80'}
                                 variant={'primary'}
                                 type={'submit'}
                                 onClick={this.setNewRootHash}
@@ -1459,7 +1535,7 @@ class HomePage extends React.Component {
                         </div>
                         <div className="text-end">
                             <Button
-                                className={'mint-btn w-100'}
+                                className={'mint-btn w-80'}
                                 variant={'primary'}
                                 type={'submit'}
                                 onClick={this.checkContractBalance}
@@ -1473,7 +1549,7 @@ class HomePage extends React.Component {
                         </div>
                         <div className="text-end">
                             <Button
-                                className={'mint-btn w-100'}
+                                className={'mint-btn w-80'}
                                 variant={'primary'}
                                 type={'submit'}
                                 onClick={this.withdrawAll}
@@ -1484,6 +1560,34 @@ class HomePage extends React.Component {
                             {
                                 this.state.withdrawAllClicked ?
                                     <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.withdrawAllMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.checkReset}
+                            >
+                                {`Check Reset`}
+                            </Button>
+                            {
+                                this.state.checkCanResetClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.canResetMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.switchCanReset}
+                            >
+                                {`Switch canReset`}
+                            </Button>
+                            {
+                                this.state.switchCanResetClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.switchCanResetMsg}</p> : null
                             }
                         </div>
                     </div>
