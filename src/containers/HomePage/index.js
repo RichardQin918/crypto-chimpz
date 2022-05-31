@@ -101,7 +101,14 @@ class HomePage extends React.Component {
             setNewRootMsg: '',
             setNewRootClicked: false,
             hasClaimed: false,
-            canReset: true
+            canReset: true,
+            localMultiplier: 0,
+            withdrawAllMsg: '',
+            withdrawAllClicked: false,
+            rewardContractBalance: 0,
+            contractBalanceMsg: '',
+            contractBalanceClicked: false,
+            rewardToken: ''
         }
 
         this.confettiTrigger = null
@@ -155,7 +162,11 @@ class HomePage extends React.Component {
             isSyncedChecked: false,
             isSyncedMsg: '',
             setNewRootMsg: '',
-            setNewRootClicked: false
+            setNewRootClicked: false,
+            withdrawAllMsg: '',
+            withdrawAllClicked: false,
+            contractBalanceMsg: '',
+            contractBalanceClicked: false
         })
     }
 
@@ -428,8 +439,8 @@ class HomePage extends React.Component {
                             //     value: ethers.utils.parseEther((presaleCost * values.amount).toString()),
                             // }
 
-                            console.log('claim payload: ',  this.rewardTokenContract.address, availableReward, result.proof)
-                            let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, availableReward, result.proof)
+                            console.log('claim payload: ',  this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier), result.proof)
+                            let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier), result.proof)
                             console.log('claim hash: ', res.hash)
                             if (res.hash !== null) {
                                 this.setState({
@@ -448,7 +459,7 @@ class HomePage extends React.Component {
                                 })
                             }
                         } catch (err) {
-                            console.log('presale call failed: ', err)
+                            console.log('claim reward failed: ', err)
                             this.setState({
                                 claimDone: true
                             }, () => {
@@ -645,9 +656,11 @@ class HomePage extends React.Component {
         let hasClaimed = await this.rewardContract.hasClaimed(address)
         let canReset = await this.rewardContract.canReset()
         let rewardContractOwner = await this.rewardContract.owner()
+        let localMultiplier = await this.rewardContract.localMultiplier()
+        let rewardContractBalance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
         console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner)
         this.setState({
-            canReset, hasClaimed, rewardContractOwner
+            canReset, hasClaimed, rewardContractOwner, localMultiplier, rewardContractBalance
         })
     }
 
@@ -665,9 +678,16 @@ class HomePage extends React.Component {
         }).then(async res => {
             let result = await res.json()
             console.log('here is summary: ', result)
+            let dataList = result.data.map(item => {
+                return {
+                    addr: item.addr,
+                    amount: item.amount / this.state.localMultiplier,
+                    nftOwned: item.nftOwned
+                }
+            })
             if (res.status === 200) {
                 this.setState({
-                    rewardSummary: result.data
+                    rewardSummary: dataList
                 })
             }
         })
@@ -683,7 +703,7 @@ class HomePage extends React.Component {
             console.log('here is reward: ', result)
             if (res.status === 200) {
                 this.setState({
-                    availableReward: result.data.reward
+                    availableReward: result.data.reward / 10000
                 })
             }
         })
@@ -736,6 +756,29 @@ class HomePage extends React.Component {
                 }
             }
         })
+    }
+
+    checkContractBalance = async () => {
+        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
+        this.setState({
+            rewardContractBalance: balance,
+            contractBalanceMsg: `Current Balance: ${balance.toString()} ${this.state.rewardToken}`,
+            contractBalanceClicked: true
+        })
+    }
+
+    withdrawAll = async () => {
+        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
+        let res = await this.rewardContract.withdrawToken(this.rewardTokenContract.address, balance)
+        if (res.hash !== null) {
+            let receipt = await res.wait()
+            if (receipt !== null && receipt !== undefined) {
+                this.setState({
+                    withdrawAllMsg: 'Withdraw all tokens requested',
+                    withdrawAllClicked: true
+                })
+            }
+        }
     }
 
     async componentDidMount() {
@@ -1361,7 +1404,7 @@ class HomePage extends React.Component {
                                                                     disabled={isSubmitting}>
                                                                 {isSubmitting &&
                                                                 <FontAwesomeIcon icon={'spinner-third'} spin/>}
-                                                                {this.state.hasClaimed && this.state.canReset ? `ACTIVATE TO CLAIM` : `CLAIM`}
+                                                                {this.state.hasClaimed ? `ACTIVATE TO CLAIM` : `CLAIM`}
                                                             </Button>
                                                             {
                                                                 this.state.showClaimMsg ?
@@ -1412,6 +1455,35 @@ class HomePage extends React.Component {
                             {
                                 this.state.setNewRootClicked ?
                                     <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.setNewRootMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-100'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.checkContractBalance}
+                            >
+                                {`Check Contract Balance`}
+                            </Button>
+                            {
+                                this.state.contractBalanceClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.contractBalanceMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-100'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.withdrawAll}
+                                disabled={this.state.rewardContractBalance === 0}
+                            >
+                                {`Withdraw All`}
+                            </Button>
+                            {
+                                this.state.withdrawAllClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.withdrawAllMsg}</p> : null
                             }
                         </div>
                     </div>

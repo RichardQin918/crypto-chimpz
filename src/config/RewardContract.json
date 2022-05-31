@@ -1,5 +1,5 @@
 {
-  "address": "0x9328110441e9C7e8eDC6Aca6AD87841BCa770b4d",
+  "address": "0x57EdDb5e9925289E765D6E22dB8e68B3642d4dC0",
   "abi": [
     {
       "inputs": [],
@@ -138,6 +138,19 @@
     },
     {
       "inputs": [],
+      "name": "localMultiplier",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "merkleRoot",
       "outputs": [
         {
@@ -190,19 +203,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "rewardPerNFT",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "bool",
@@ -211,6 +211,19 @@
         }
       ],
       "name": "setCanReset",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "newLocalMultiplier",
+          "type": "uint256"
+        }
+      ],
+      "name": "setLocalMultiplier",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -244,19 +257,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "newReward",
-          "type": "uint256"
-        }
-      ],
-      "name": "setRewardPerNFT",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "newOwner",
           "type": "address"
@@ -272,6 +272,24 @@
       "name": "withdraw",
       "outputs": [],
       "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_tokenContract",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     }
   ]

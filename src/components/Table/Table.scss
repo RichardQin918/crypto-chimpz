@@ -3,6 +3,9 @@
     margin: 1em;
     display: flex;
     flex-direction: column;
+    max-height: 500px;
+    overflow-y: scroll;
+    overflow-x: scroll;
 
 .header, .row {
     display: flex;

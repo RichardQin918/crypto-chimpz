@@ -3,7 +3,7 @@ import './Table.scss'
 
 const Row = ({addr, amount, nftOwned}) => (
     <div className="row">
-        <div>{addr}</div>
+        <div style={{ fontSize: 10, fontWeight: 'bold', display: 'flex', justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>{addr}</div>
         <div>{amount}</div>
         <div>{nftOwned}</div>
     </div>
