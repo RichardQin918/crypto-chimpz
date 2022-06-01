@@ -108,7 +108,8 @@ class HomePage extends React.Component {
             rewardContractBalance: 0,
             contractBalanceMsg: '',
             contractBalanceClicked: false,
-            rewardToken: ''
+            rewardToken: '',
+            decimals: 1000000000000000000
         }
 
         this.confettiTrigger = null
@@ -657,8 +658,8 @@ class HomePage extends React.Component {
         let canReset = await this.rewardContract.canReset()
         let rewardContractOwner = await this.rewardContract.owner()
         let localMultiplier = await this.rewardContract.localMultiplier()
-        let rewardContractBalance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
-        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner)
+        let rewardContractBalance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
+        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner, rewardContractBalance, typeof rewardContractBalance)
         this.setState({
             canReset, hasClaimed, rewardContractOwner, localMultiplier, rewardContractBalance
         })
@@ -759,7 +760,7 @@ class HomePage extends React.Component {
     }
 
     checkContractBalance = async () => {
-        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
+        let balance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
         this.setState({
             rewardContractBalance: balance,
             contractBalanceMsg: `Current Balance: ${balance.toString()} ${this.state.rewardToken}`,
@@ -768,7 +769,7 @@ class HomePage extends React.Component {
     }
 
     withdrawAll = async () => {
-        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toNumber()
+        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()
         let res = await this.rewardContract.withdrawToken(this.rewardTokenContract.address, balance)
         if (res.hash !== null) {
             let receipt = await res.wait()
