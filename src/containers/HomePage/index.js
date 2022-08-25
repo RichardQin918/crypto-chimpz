@@ -998,7 +998,7 @@ class HomePage extends React.Component {
                             </Countdown>
 
                             {
-                                // ethers.utils.isAddress(this.state.address) && this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
+                                ethers.utils.isAddress(this.state.address) && this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
                                     <Button size={"lg"}
                                             onClick={() => window.ethereum ? this.openAdminModal() : onBoard.startOnboarding()}
                                             disabled={!mintDone}
@@ -1007,7 +1007,7 @@ class HomePage extends React.Component {
                                         <FontAwesomeIcon icon={['fas', 'coins']}/>
                                         ADMIN
                                     </Button>
-                                // : null
+                                : null
                             }
                         </div>
                     </div>
