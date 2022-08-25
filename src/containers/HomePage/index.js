@@ -24,6 +24,8 @@ import ClassNames from "classnames";
 
 import {Typography} from '@material-ui/core'
 import {isMobile} from 'react-device-detect';
+import bigDecimal from 'js-big-decimal';
+
 
 import {ethers} from "ethers";
 import Contract from '../../config/Contract.json'
@@ -400,8 +402,8 @@ class HomePage extends React.Component {
     }
 
     handleClaimReward = async () => {
-        const {address, availableReward, canReset, hasClaimed} = this.state
-        console.log('address: ', address, availableReward)
+        const {address, availableReward, canReset, hasClaimed, localMultiplier} = this.state
+        console.log('address: ', address, availableReward, ethers.BigNumber.from(localMultiplier).toNumber())
         if (hasClaimed && canReset) {
             this.setState({
                 resetDone: false
@@ -448,8 +450,8 @@ class HomePage extends React.Component {
                     }, async () => {
                         console.log('started claim')
                         try {
-                            console.log('claim payload: ',  this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier))
-                            let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, Math.floor(availableReward * this.state.localMultiplier), result.proof)
+                            console.log('claim payload: ',  this.rewardTokenContract.address, parseFloat(bigDecimal.multiply(availableReward, ethers.BigNumber.from(localMultiplier).toNumber())))
+                            let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, parseFloat(bigDecimal.multiply(availableReward, ethers.BigNumber.from(localMultiplier).toNumber())), result.proof)
                             console.log('claim hash: ', res.hash)
                             if (res.hash !== null) {
                                 this.setState({
@@ -668,7 +670,7 @@ class HomePage extends React.Component {
         let rewardContractOwner = await this.rewardContract.owner()
         let localMultiplier = await this.rewardContract.localMultiplier()
         let rewardContractBalance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
-        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner, rewardContractBalance, typeof rewardContractBalance)
+        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner, rewardContractBalance, typeof rewardContractBalance, localMultiplier)
         this.setState({
             canReset, hasClaimed, rewardContractOwner, localMultiplier, rewardContractBalance
         })
@@ -996,7 +998,7 @@ class HomePage extends React.Component {
                             </Countdown>
 
                             {
-                                this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
+                                // ethers.utils.isAddress(this.state.address) && this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
                                     <Button size={"lg"}
                                             onClick={() => window.ethereum ? this.openAdminModal() : onBoard.startOnboarding()}
                                             disabled={!mintDone}
@@ -1005,7 +1007,7 @@ class HomePage extends React.Component {
                                         <FontAwesomeIcon icon={['fas', 'coins']}/>
                                         ADMIN
                                     </Button>
-                                : null
+                                // : null
                             }
                         </div>
                     </div>
