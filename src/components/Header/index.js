@@ -25,6 +25,10 @@ class Header extends React.Component {
         this.setState({active: !this.state.active})
     }
 
+    componentDidMount() {
+
+    }
+
     render() {
         return (
             <header>

@@ -23,12 +23,19 @@ import ReactCanvasConfetti from "react-canvas-confetti";
 import ClassNames from "classnames";
 
 import {Typography} from '@material-ui/core'
+import {isMobile} from 'react-device-detect';
+import bigDecimal from 'js-big-decimal';
+
 
 import {ethers} from "ethers";
 import Contract from '../../config/Contract.json'
+import RewardContract from '../../config/RewardContract.json'
+import RewardTokenContract from '../../config/RewardTokenContract.json'
 
 import MetaMaskOnboarding from "@metamask/onboarding";
 import openSea from '../../assets/opensea.png'
+
+import Table from '../../components/Table/Table'
 
 const currentUrl = new URL(window.location.href)
 const forwarderOrigin = currentUrl.hostname === 'localhost'
@@ -51,6 +58,7 @@ class HomePage extends React.Component {
         this.state = {
             activeQuestion: '',
             mintModalVisible: false,
+            claimModalVisible: false,
             mintAmount: 0,
             address: '',
             networkId: 0,
@@ -80,14 +88,49 @@ class HomePage extends React.Component {
             addressMintedBalance: 0,
             showErrMsg: false,
             errMsg: '',
-            mintDone: true
+            mintDone: true,
+
+            claimMsg: '',
+            showClaimMsg: false,
+            claimDone: true,
+            availableReward: 0,
+            action: '',
+            rewardContractOwner: '',
+            adminModalVisible: false,
+            rewardSummary: [],
+            isSyncedMsg: '',
+            isSynced: true,
+            isSyncedChecked: false,
+            setNewRootMsg: '',
+            setNewRootClicked: false,
+            hasClaimed: false,
+            canReset: true,
+            localMultiplier: 0,
+            withdrawAllMsg: '',
+            withdrawAllClicked: false,
+            rewardContractBalance: 0,
+            contractBalanceMsg: '',
+            contractBalanceClicked: false,
+            rewardToken: '',
+            apiUrl: "https://crzmerkle.com/",
+            checkCanResetClicked: false,
+            switchCanResetClicked: false,
+            canResetMsg: '',
+            switchCanResetMsg: '',
+            decimals: 1000000000000000000
         }
 
         this.confettiTrigger = null
         this.animationInstance = null
         this.openMintModal = this.openMintModal.bind(this)
         this.closeMintModal = this.closeMintModal.bind(this)
+        this.openClaimModal = this.openClaimModal.bind(this)
+        this.closeClaimModal = this.closeClaimModal.bind(this)
+        this.openAdminModal = this.openAdminModal.bind(this)
+        this.closeAdminModal = this.closeAdminModal.bind(this)
         this.toggleFAQ = this.toggleFAQ.bind(this)
+        this.checkIfTreeSynced = this.checkIfTreeSynced.bind(this)
+        this.setNewRootHash = this.setNewRootHash.bind(this)
     }
 
     async openMintModal() {
@@ -100,6 +143,45 @@ class HomePage extends React.Component {
             mintModalVisible: false,
             errMsg: '',
             showErrMsg: false
+        })
+    }
+
+    async openClaimModal() {
+        await this.readRewardContractInfo()
+        await this.readRewardTokenContractInfo()
+        await this.getSwitch()
+        this.setState({claimModalVisible: true})
+    }
+
+    closeClaimModal() {
+        this.setState({
+            claimModalVisible: false,
+            claimMsg: '',
+            showClaimMsg: false
+        })
+    }
+
+    async openAdminModal() {
+        await this.readAdminInfo()
+        this.setState({adminModalVisible: true})
+    }
+
+    closeAdminModal() {
+        this.setState({
+            adminModalVisible: false,
+            isSyncedChecked: false,
+            isSyncedMsg: '',
+            setNewRootMsg: '',
+            setNewRootClicked: false,
+            withdrawAllMsg: '',
+            withdrawAllClicked: false,
+            contractBalanceMsg: '',
+            contractBalanceClicked: false,
+            canResetMsg: '',
+            checkCanResetClicked: false,
+            switchCanResetMsg: '',
+            switchCanResetClicked: false
+
         })
     }
 
@@ -151,7 +233,8 @@ class HomePage extends React.Component {
 
     closeMsgModal = () => {
         this.setState({
-            msgModalVisible: false
+            msgModalVisible: false,
+            action: ''
         })
     }
 
@@ -206,6 +289,7 @@ class HomePage extends React.Component {
                                     console.log('presale receipt: ', receipt)
                                     if (receipt !== null && receipt !== undefined) {
                                         this.setState({
+                                            action: 'Mint',
                                             msgModalVisible: true,
                                             mintModalVisible: false,
                                             mintDone: true
@@ -317,6 +401,114 @@ class HomePage extends React.Component {
         }
     }
 
+    handleClaimReward = async () => {
+        const {address, availableReward, canReset, hasClaimed, localMultiplier} = this.state
+        console.log('address: ', address, availableReward, ethers.BigNumber.from(localMultiplier).toNumber())
+        if (hasClaimed && canReset) {
+            this.setState({
+                resetDone: false
+            }, async () => {
+                console.log('start reset')
+                try {
+                    let res = await this.rewardContract.resetClaimed()
+                    console.log('reset hash: ', res.hash)
+                    if (res.hash !== null) {
+                        this.setState({
+                            explorerHash: res.hash
+                        }, async () => {
+                            let receipt = await res.wait()
+                            console.log('reset receipt: ', receipt)
+                            if (receipt !== null && receipt !== undefined) {
+                                let hasClaimed = await this.rewardContract.hasClaimed()
+                                this.setState({
+                                    resetDone: true,
+                                    hasClaimed
+                                })
+                            }
+                        })
+                    }
+                } catch(err) {
+                    console.log('reset failed: ', err)
+                }
+            })
+
+        } else {
+            fetch(`${this.state.apiUrl}getProof?address=${address.toLowerCase()}&amount=${availableReward}`, {
+                method: 'GET',
+            }).then(async res => {
+                let result = await res.json()
+                console.log('get claim proof result: ', address, result)
+                if (result.message === 'address not rewardListed or invalid claim amount') {
+                    this.setState({
+                        showErrMsg: true,
+                        errMsg: `${address} is not rewardListed or invalid claim amount`
+                    })
+                } else {
+                    // calling pre-sale
+                    this.setState({
+                        claimDone: false
+                    }, async () => {
+                        console.log('started claim')
+                        try {
+                            console.log('claim payload: ',  this.rewardTokenContract.address, parseFloat(bigDecimal.multiply(availableReward, ethers.BigNumber.from(localMultiplier).toNumber())))
+                            let res = await this.rewardContract.claimTokens(this.rewardTokenContract.address, parseFloat(bigDecimal.multiply(availableReward, ethers.BigNumber.from(localMultiplier).toNumber())), result.proof)
+                            console.log('claim hash: ', res.hash)
+                            if (res.hash !== null) {
+                                this.setState({
+                                    explorerHash: res.hash
+                                }, async () => {
+                                    let receipt = await res.wait()
+                                    console.log('claim receipt: ', receipt)
+                                    if (receipt !== null && receipt !== undefined) {
+                                        this.setState({
+                                            action: 'Claim',
+                                            msgModalVisible: true,
+                                            claimModalVisible: false,
+                                            claimDone: true
+                                        })
+                                    }
+                                })
+                            }
+                        } catch (err) {
+                            console.log('claim reward failed: ', err)
+                            this.setState({
+                                claimDone: true
+                            }, () => {
+                                if (err.reason !== undefined) {
+                                    if (err.reason.includes('insufficient funds for intrinsic transaction cost')) {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: 'Not enough funds in your wallet'
+                                        })
+                                    } else {
+                                        this.setState({
+                                            showErrMsg: true,
+                                            errMsg: err.reason
+                                        })
+                                    }
+                                } else {
+                                    this.setState({
+                                        showErrMsg: true,
+                                        errMsg: err.message
+                                    })
+                                }
+                            })
+
+
+                        }
+                        this.setState({
+                            claimDone: true
+                        })
+
+                    })
+                }
+            }).catch(err => {
+                console.log('claim fetch failed: ', err)
+            })
+        }
+
+    }
+
     handleNewChain = (chainId) => {
         this.setState({
             chainId: chainId
@@ -379,10 +571,15 @@ class HomePage extends React.Component {
             // this.contract = new ethers.Contract(Contract.address, Contract.abi, this.provider)
             this.signer = (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
             this.contract = new ethers.Contract(Contract.address, Contract.abi, this.signer)
+            this.rewardContract= new ethers.Contract(RewardContract.address, RewardContract.abi, this.signer)
+            this.rewardTokenContract = new ethers.Contract(RewardTokenContract.address, RewardTokenContract.abi, this.signer)
+
             this.setState({
                 startWatch: true
             }, async () => {
                 await this.readContractInfo()
+                await this.readRewardContractInfo()
+                await this.readRewardTokenContractInfo()
             })
         }
     }
@@ -462,11 +659,187 @@ class HomePage extends React.Component {
         }
     }
 
+    readRewardContractInfo = async () => {
+        const { address } = this.state
+        this.getRewards().then(() => {
+            const { availableReward } = this.state
+            console.log('reward: ', availableReward)
+        })
+        let hasClaimed = await this.rewardContract.hasClaimed(address)
+        let canReset = await this.rewardContract.canReset()
+        let rewardContractOwner = await this.rewardContract.owner()
+        let localMultiplier = await this.rewardContract.localMultiplier()
+        let rewardContractBalance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
+        console.log('rewardContract Info: ', hasClaimed, canReset, rewardContractOwner, rewardContractBalance, typeof rewardContractBalance, localMultiplier)
+        this.setState({
+            canReset, hasClaimed, rewardContractOwner, localMultiplier, rewardContractBalance
+        })
+    }
+
+    readRewardTokenContractInfo = async () => {
+        let rewardToken = await this.rewardTokenContract.symbol()
+        console.log('rewardToken: ', rewardToken)
+        this.setState({
+            rewardToken
+        })
+    }
+
+    getSwitch = async () => {
+        fetch(`${this.state.apiUrl}getSwitch`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            console.log('switch status: ', result)
+            this.setState({
+                dbUpdating: result.updating
+            })
+        }).catch(err => {
+            console.log('get switch failed: ', err)
+            this.setState({
+                dbUpdating: true
+            })
+        })
+    }
+
+    readAdminInfo = async () => {
+        fetch(`${this.state.apiUrl}getSummary`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            let dataList = result.data.map(item => {
+                return {
+                    addr: item.addr,
+                    amount: item.amount / this.state.localMultiplier,
+                    nftOwned: item.nftOwned
+                }
+            })
+            if (res.status === 200) {
+                this.setState({
+                    rewardSummary: dataList
+                })
+            }
+        })
+    }
+
+    getRewards = async () => {
+        const { address } = this.state
+        console.log('address: ', address)
+        fetch(`${this.state.apiUrl}getOwnerRewardFromDB?address=${address.toLowerCase()}`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            console.log('here is reward: ', result)
+            if (res.status === 200) {
+                if (result.data.msg === 'address not found') {
+                    this.setState({
+                        availableReward: 0
+                    })
+                } else {
+                    this.setState({
+                        availableReward: result.data.reward / 10000
+                    })
+                }
+
+            }
+        })
+    }
+
     sameAddress = (addr1, addr2) => {
         return addr1.toLowerCase() === addr2.toLowerCase();
 
     }
 
+    checkIfTreeSynced = () => {
+        this.setState({
+            isSyncedChecked: true
+        })
+        fetch(`${this.state.apiUrl}getRootHash`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            let contractRootHash = await this.rewardContract.merkleRoot()
+            let isSynced = result.hash.toLowerCase() === contractRootHash.toLowerCase()
+            console.log('isSynced: ', isSynced)
+            if (res.status === 200) {
+                this.setState({
+                    currentRoothash: result.hash,
+                    isSynced,
+                    isSyncedMsg: isSynced ? 'Tree is synced' : 'Tree is not synced !, You should update tree root',
+                })
+            }
+        })
+    }
+
+    setNewRootHash = () => {
+        fetch(`${this.state.apiUrl}getRootHash`, {
+            method: 'GET',
+        }).then(async res => {
+            let result = await res.json()
+            if (this.state.currentRoothash !== '') {
+                console.log('updating: ', result.hash)
+                let res = await this.rewardContract.setMerkleRoot(result.hash)
+                this.setState({
+                    setNewRootClicked: true
+                })
+                if (res.hash !== null) {
+                    let receipt = await res.wait()
+                    if (receipt !== null && receipt !== undefined) {
+                        this.setState({
+                            setNewRootMsg: 'Root Hash Updated in Contract'
+                        })
+                    }
+                }
+            }
+        })
+    }
+
+    checkContractBalance = async () => {
+        let balance = parseFloat(ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()) / this.state.decimals
+        this.setState({
+            rewardContractBalance: balance,
+            contractBalanceMsg: `Current Balance: ${balance.toString()} ${this.state.rewardToken}`,
+            contractBalanceClicked: true
+        })
+    }
+
+    withdrawAll = async () => {
+        let balance = ethers.BigNumber.from(await this.rewardContract.checkRewardBalance(this.rewardTokenContract.address, this.rewardContract.address)).toString()
+        let res = await this.rewardContract.withdrawToken(this.rewardTokenContract.address, balance)
+        if (res.hash !== null) {
+            let receipt = await res.wait()
+            if (receipt !== null && receipt !== undefined) {
+                this.setState({
+                    withdrawAllMsg: 'Withdraw all tokens requested',
+                    withdrawAllClicked: true
+                })
+            }
+        }
+    }
+
+    checkReset = async () => {
+        let canReset = await this.rewardContract.canReset()
+        console.log('this is canReset: ', canReset)
+        this.setState({
+            canResetMsg: `canReset status: ${canReset}`,
+            checkCanResetClicked: true
+        })
+    }
+
+    switchCanReset = async () => {
+        let canReset = await this.rewardContract.canReset()
+        let res = await this.rewardContract.setCanReset(!canReset)
+        if (res.hash !== null) {
+            let receipt = await res.wait()
+            if (receipt !== null && receipt !== undefined) {
+                let canReset = await this.rewardContract.canReset()
+                this.setState({
+                    switchCanResetMsg: 'canReset updated',
+                    switchCanResetClicked: true,
+                    canReset
+                })
+            }
+        }
+    }
 
     async componentDidMount() {
         // Hack to force scroll triggers to work properly, TODO: listen for image load event
@@ -599,21 +972,44 @@ class HomePage extends React.Component {
                 </div>
                 <div className="wrapper mint">
                     <div className="container">
-                        <Countdown
-                            // date={new Date('2021-12-25T14:46:25-05:00')}
-                            date={new Date('2021-12-27T00:00:00-05:00')}
-                            prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
-                                Pre-sale Starts In
-                            </h2>}
-                        >
+                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                             <Button size={"lg"}
                                     onClick={() => window.ethereum ? this.openMintModal() : onBoard.startOnboarding()}
                                     disabled={!mintDone}
+                                    style={{ marginBottom: isMobile ? '15px' : null }}
                             >
                                 <FontAwesomeIcon icon={['fas', 'coins']}/>
                                 MiNT NOW!!!
                             </Button>
-                        </Countdown>
+                            <Countdown
+                                date={new Date('2022-05-31T20:00:00-05:00')}
+                                prepend={<h2 style={{fontFamily: "'Space Mono', sans-serif", fontSize: "30px", textTransform: 'uppercase'}}>
+                                    REWARD CLAIMING STARTS IN
+                                </h2>}
+                            >
+                                <Button size={"lg"}
+                                        onClick={() => window.ethereum ? this.openClaimModal() : onBoard.startOnboarding()}
+                                        disabled={!mintDone}
+                                        style={{ backgroundColor: '#e8bf15', borderColor: '#e8bf15', marginBottom: isMobile ? '15px' : null }}
+                                >
+                                    <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                    CLAIM REWARDS
+                                </Button>
+                            </Countdown>
+
+                            {
+                                // ethers.utils.isAddress(this.state.address) && this.state.address.toLowerCase() === this.state.rewardContractOwner.toLowerCase() ?
+                                    <Button size={"lg"}
+                                            onClick={() => window.ethereum ? this.openAdminModal() : onBoard.startOnboarding()}
+                                            disabled={!mintDone}
+                                            style={{ backgroundColor: '#c13584', borderColor: '#c13584' }}
+                                    >
+                                        <FontAwesomeIcon icon={['fas', 'coins']}/>
+                                        ADMIN
+                                    </Button>
+                                // : null
+                            }
+                        </div>
                     </div>
                 </div>
                 <div className="wrapper intro" id={'about'}>
@@ -628,7 +1024,7 @@ class HomePage extends React.Component {
                                 </h2>
                                 <p>
                                     Join us on our CryptoChimpz journey by viewing our roadmap. Strap in as the road
-                                    ahead is bumpy, but fruitful! The CryptoChimpz were forced into turmoil and 10,000
+                                    ahead is bumpy, but fruitful! The CryptoChimpz were forced into turmoil and 5,000
                                     of them have been captured after a brutal invasion by humans on the ChimpStar
                                     Galaxy. The Chimpz have suffered brutal testing by the humans in their labs, but
                                     have now broken free.
@@ -756,7 +1152,7 @@ class HomePage extends React.Component {
                                     <h3>Wait, there’s more!</h3>
                                     <p>
                                         The skies light up and we see 100’s of spaceships landing, that’s right,
-                                        ChimpWives to the rescue! 10,000 ChimpWives have come to the help of their
+                                        ChimpWives to the rescue! 5,000 ChimpWives have come to the help of their
                                         beloved CryptoChimpz to take them back to the ChimpStar Galaxy. Congratulations!
                                     </p>
                                     <p>
@@ -788,7 +1184,7 @@ class HomePage extends React.Component {
                             </p>
                         </div>
                         <div className="item">
-                            <h3>STAKING ($CHIMPZ)</h3>
+                            <h3>$APE COIN CLAIMS</h3>
                             <p>
                                 Crypto Chimp holders can <strong>stake their NFTs</strong> and
                                 earn <strong>daily</strong> tokens. Holders will have the option to use the tokens to
@@ -868,7 +1264,7 @@ class HomePage extends React.Component {
                     <div className="status">
                         <FontAwesomeIcon icon={'check-circle'}/>
                         <div className="message">
-                            Mint Requested <br/><br/>
+                            {`${this.state.action} Requested`} <br/><br/>
                             <Button variant={'primary'} onClick={this.goToEtherscan}>
                                 Check On Etherscan
                             </Button>
@@ -1003,6 +1399,192 @@ class HomePage extends React.Component {
                                 </>
                     }
 
+                </Modal>
+
+
+                <Modal
+                    width="400px" title={'CURRENT CLAIM BALANCE'}
+                    visible={this.state.claimModalVisible}
+                    onClose={this.closeClaimModal}
+                >
+                    {
+                        this.state.dbUpdating ?
+                            <div className="status">
+                                <FontAwesomeIcon icon={'spinner-third'} spin/>
+                                <div className="message">
+                                    Updating rewards, please try again later
+                                </div>
+                            </div> :
+                                this.state.hasClaimed && !this.state.canReset ?
+                                    <div className="status">
+                                        <FontAwesomeIcon icon={'spinner-third'} spin/>
+                                        <div className="message">
+                                            You have already claimed your reward.
+                                            Please wait for next round of reward to be distributed
+                                        </div>
+                                    </div> :
+                                        this.state.availableReward === 0 ?
+                                            <div className="status">
+                                                <FontAwesomeIcon icon={'spinner-third'} spin/>
+                                                <div className="message">
+                                                    No available rewards to claim
+                                                </div>
+                                            </div>
+                                            :
+                                            <>
+                                                <Formik
+                                                    initialValues={{amount: this.state.availableReward, token: this.state.rewardToken}}
+                                                    onSubmit={async (values, {setSubmitting, resetForm}) => {
+                                                        setSubmitting(true)
+                                                        setTimeout(async () => {
+                                                            await this.handleClaimReward(values)
+                                                            resetForm()
+                                                            setSubmitting(false)
+                                                        }, 1000)
+                                                    }}
+                                                >
+                                                    {
+                                                        ({
+                                                             values,
+                                                             errors,
+                                                             handleSubmit,
+                                                             isSubmitting,
+                                                         }) => (
+                                                            <Form onSubmit={handleSubmit} className={'row g-3'}>
+                                                                <Form.Group controlId={'formAmount'} className={'col-12'}>
+                                                                    <Form.Label>{`$${values.token} available to claim !`}</Form.Label>
+                                                                    <Form.Label>{`The following balance can be withdrawn now or it can be accumulated and withdrawn at a later time.`}</Form.Label>
+                                                                    <InputGroup
+                                                                        size={'lg'}
+                                                                        className={ClassNames([{'is-invalid': errors.amount}])}
+                                                                    >
+                                                                        <Form.Control
+                                                                            type={'number'} placeholder={'Enter amount'}
+                                                                            name={'amount'} value={values.amount}
+                                                                            className={ClassNames(['text-center', {'is-invalid': errors.amount}])}
+                                                                            style={{ backgroundColor: 'black' }}
+                                                                            autoComplete={'off'}
+                                                                            disabled={true}
+                                                                        />
+                                                                    </InputGroup>
+                                                                </Form.Group>
+                                                                <div className="col-12 text-end">
+                                                                    <Button className={'mint-btn w-100'} variant={'primary'}
+                                                                            type={'submit'}
+                                                                            disabled={isSubmitting}>
+                                                                        {isSubmitting &&
+                                                                        <FontAwesomeIcon icon={'spinner-third'} spin/>}
+                                                                        {this.state.hasClaimed ? `ACTIVATE TO WITHDRAW` : `WITHDRAW`}
+                                                                    </Button>
+                                                                    {
+                                                                        this.state.showClaimMsg ?
+                                                                            <p style={{ display: 'flex', justifyContent: 'center' }}>{this.state.claimMsg}</p> : null
+                                                                    }
+                                                                </div>
+                                                            </Form>
+                                                        )
+                                                    }
+                                                </Formik>
+                                            </>
+                    }
+                </Modal>
+
+                <Modal
+                    width="800px" title={'Admin Information'}
+                    visible={this.state.adminModalVisible}
+                    onClose={this.closeAdminModal}
+                >
+                    <div>
+                        <Table listData={this.state.rewardSummary}/>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.checkIfTreeSynced}
+                            >
+                                {`Check Sync`}
+                            </Button>
+                            {
+                                this.state.isSyncedChecked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: !this.state.isSynced ? 'red' : 'green' }}>{this.state.isSyncedMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.setNewRootHash}
+                                disabled={this.state.isSynced}
+                            >
+                                {`Set New Root Hash`}
+                            </Button>
+                            {
+                                this.state.setNewRootClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.setNewRootMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.checkContractBalance}
+                            >
+                                {`Check Contract Balance`}
+                            </Button>
+                            {
+                                this.state.contractBalanceClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.contractBalanceMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.withdrawAll}
+                                disabled={this.state.rewardContractBalance === 0}
+                            >
+                                {`Withdraw All`}
+                            </Button>
+                            {
+                                this.state.withdrawAllClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.withdrawAllMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.checkReset}
+                            >
+                                {`Check Reset`}
+                            </Button>
+                            {
+                                this.state.checkCanResetClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.canResetMsg}</p> : null
+                            }
+                        </div>
+                        <div className="text-end">
+                            <Button
+                                className={'mint-btn w-80'}
+                                variant={'primary'}
+                                type={'submit'}
+                                onClick={this.switchCanReset}
+                            >
+                                {`Switch canReset`}
+                            </Button>
+                            {
+                                this.state.switchCanResetClicked ?
+                                    <p style={{ display: 'flex', justifyContent: 'center', color: 'green' }}>{this.state.switchCanResetMsg}</p> : null
+                            }
+                        </div>
+                    </div>
                 </Modal>
             </div>
         )
