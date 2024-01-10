@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkCrypto_Chimpz=self.webpackChunkCrypto_Chimpz||[]).push([[3],{3:function(e,n,p){p.r(n);var r=p(184);n.default=function(){return(0,r.jsx)("div",{className:"App",children:(0,r.jsx)("h1",{children:"Not Found"})})}}}]);
+//# sourceMappingURL=3.7f036da1.chunk.js.map
