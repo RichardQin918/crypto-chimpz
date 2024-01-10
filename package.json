@@ -1,7 +1,7 @@
 {
   "name": "Crypto Chimpz",
   "version": "0.1.0",
-  "homepage": "https://gitname.github.io/crypto-chimpz",
+  "homepage": "https://richardqin918.github.io/crypto-chimpz/",
   "private": true,
   "scripts": {
     "start": "craco start",
